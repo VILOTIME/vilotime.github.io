@@ -5,10 +5,10 @@
 
 ## 00 项目截图
 
-![alt text](ReadmeFile/image-home.png)
+![alt text](ReadmeFiles/image-home.png)
 
-![alt text](ReadmeFile/image-select.png)
+![alt text](ReadmeFiles/image-select.png)
 
-![alt text](ReadmeFile/image-random.png)
+![alt text](ReadmeFiles/image-random.png)
 
-![alt text](ReadmeFile/image-chemistry.png)
+![alt text](ReadmeFiles/image-chemistry.png)
