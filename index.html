@@ -34,17 +34,53 @@
             height: 100%;
             border: none;
         }
+
+        .menu-items {
+        display: none;
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .menu-toggle:hover .menu-items {
+        display: block;
+    }
+
+    .menu-items li {
+        margin-bottom: 10px;
+    }
+
+    .menu-items li a {
+        display: block;
+        padding: 5px;
+        text-decoration: none;
+        color: #333;
+    }
+
+    .menu-items li a:hover {
+        background-color: #333;
+        color: #fff;
+    }
     </style>
 </head>
 <body>
-    <div class="sidebar">
+    <!-- <div class="sidebar">
         <h2>导航列表</h2>
-        <!-- 列表 -->
+        
         <a href="Passages/home.html" target="Frame">主页</a>
         <a href="Passages/投稿000-生命的思考.html" target="Frame">投稿000-生命的思考</a>
-        <!-- 更多链接 -->
+    </div> -->
+
+    <div class="menu">
+        <div class="menu-toggle">
+            <button>菜单</button>
+            <ul class="menu-items">
+                <li><a href="Passages/home.html" target="Frame">主页</a></li>
+                <li><a href="Passages/投稿000-生命的思考.html" target="Frame">投稿000-生命的思考</a></li>
+            </ul>
+        </div>
     </div>
-    
+
     <div class="content">
         <!-- 显示区域 -->
         <iframe name="Frame" src="Passages/home.html"></iframe>
