@@ -10,24 +10,8 @@
             font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
-        }
-        .sidebar {
-            width: 200px;
-            background-color: #f1f1f1;
-            padding: 10px;
-        }
-        .sidebar a {
-            display: block;
-            padding: 5px;
-            text-decoration: none;
-            color: black;
-        }
-        .sidebar a:hover {
-            background-color: #ddd;
-        }
-        .content {
-            flex-grow: 1;
-            padding: 10px;
+            margin:0;
+            padding:0;
         }
         iframe {
             width: 100%;
@@ -35,32 +19,50 @@
             border: none;
         }
 
-        .menu-items {
-        display: none;
+        ul { 
+            padding-inline-start: 0px;
+        }
+
+        ul {
         list-style-type: none;
-        padding: 0;
         margin: 0;
-    }
-
-    .menu-toggle:hover .menu-items {
-        display: block;
-    }
-
-    .menu-items li {
-        margin-bottom: 10px;
-    }
-
-    .menu-items li a {
-        display: block;
-        padding: 5px;
-        text-decoration: none;
-        color: #333;
-    }
-
-    .menu-items li a:hover {
+        padding: 0;
+        overflow: hidden;
         background-color: #333;
-        color: #fff;
-    }
+        }
+
+        li {
+            float: left;
+        }
+
+        li a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        li a:hover {
+            background-color: #111;
+        }
+        ul {
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+        .div1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .div2 {
+            position: sticky;
+            top: 0;
+            z-index: 100; /* 确保导航栏在页面上方 */
+        }
+    
     </style>
 </head>
 <body>
@@ -70,18 +72,14 @@
         <a href="Passages/home.html" target="Frame">主页</a>
         <a href="Passages/投稿000-生命的思考.html" target="Frame">投稿000-生命的思考</a>
     </div> -->
-
-    <div class="menu">
-        <div class="menu-toggle">
-            <button>菜单</button>
-            <ul class="menu-items">
-                <li><a href="Passages/home.html" target="Frame">主页</a></li>
-                <li><a href="Passages/投稿000-生命的思考.html" target="Frame">投稿000-生命的思考</a></li>
-            </ul>
-        </div>
+    <div class="div1">
+        <ul>
+            <li><a href="Passages/home.html" target="Frame">主页</a></li>
+            <li><a href="Passages/topic.html" target="Frame">每周话题</a></li>
+        </ul>
     </div>
 
-    <div class="content">
+    <div class="div2"></div>>
         <!-- 显示区域 -->
         <iframe name="Frame" src="Passages/home.html"></iframe>
     </div>
