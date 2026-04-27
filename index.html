@@ -15,8 +15,10 @@
         }
         iframe {
             width: 100%;
-            height: 100%;
+            height: 90%;
             border: none;
+            position: fixed;
+            bottom: 0;
         }
 
         ul { 
@@ -24,11 +26,11 @@
         }
 
         ul {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #333;
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
         }
 
         li {
@@ -51,27 +53,10 @@
             top: 0;
             width: 100%;
         }
-        .div1 {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .div2 {
-            position: sticky;
-            top: 0;
-            z-index: 100; /* 确保导航栏在页面上方 */
-        }
     
     </style>
 </head>
 <body>
-    <!-- <div class="sidebar">
-        <h2>导航列表</h2>
-        
-        <a href="Passages/home.html" target="Frame">主页</a>
-        <a href="Passages/投稿000-生命的思考.html" target="Frame">投稿000-生命的思考</a>
-    </div> -->
     <div class="div1">
         <ul>
             <li><a href="Passages/home.html" target="Frame">主页</a></li>
@@ -79,7 +64,7 @@
         </ul>
     </div>
 
-    <div class="div2"></div>>
+    <div class="div2"></div>
         <!-- 显示区域 -->
         <iframe name="Frame" src="Passages/home.html"></iframe>
     </div>
