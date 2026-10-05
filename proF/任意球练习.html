@@ -958,7 +958,7 @@ window.init = async ({ width, height, ...options }) => {
   }
 
   /* https://github.com/LLK/scratch-gui/blob/develop/src/containers/stage.jsx#L176-L300 */
-  const getEventXY = e => {
+  const getEventXY = e => { const ycPadTouch = t => !!(t && t.target && t.target.closest && t.target.closest('.yc-pad')); const ycPick = list => { if (!list) { return null } for (let i = 0; i < list.length; i++) { if (!ycPadTouch(list[i])) { return list[i] } } return null }; const ycT = ycPick(e.touches) || ycPick(e.changedTouches); if (ycT) { return { x: ycT.clientX, y: ycT.clientY } };
     if (e.touches && e.touches[0]) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY }
     } else if (e.changedTouches && e.changedTouches[0]) {
@@ -1030,7 +1030,7 @@ window.init = async ({ width, height, ...options }) => {
     })
     return { mousePosition, rect }
   }
-  function handleMouseMove (event) {
+  function handleMouseMove (event) { if (event.target && event.target.closest && event.target.closest('.yc-pad')) return;
     if (postIfPointerLocked(event)) return
     const { mousePosition, rect } = postMouse(event)
     if (mouseDown && !isDragging) {
@@ -1071,7 +1071,7 @@ window.init = async ({ width, height, ...options }) => {
       window.focus()
     }
   }
-  function handleMouseUp (event) {
+  function handleMouseUp (event) { if (event.target && event.target.closest && event.target.closest('.yc-pad')) return;
     cancelMouseDownTimeout()
     mouseDown = false
     mouseDownPosition = null

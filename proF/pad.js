@@ -14,35 +14,33 @@
   if (window.__ycPadLoaded) { return; }
   window.__ycPadLoaded = true;
 
-  var STORE_KEY = 'yc-pad';
+  var STORE_KEY = 'yc-pad-v2';
   /* 轻点也保证按住这么久，避免游戏还没采样到就松开了 */
   var MIN_HOLD = 160;
 
   var KEYS = [
-    { cls: 'up', key: 'w', code: 'KeyW', keyCode: 87, arrow: '▲', label: 'W', name: '上' },
-    { cls: 'left', key: 'a', code: 'KeyA', keyCode: 65, arrow: '◀', label: 'A', name: '左' },
-    { cls: 'down', key: 's', code: 'KeyS', keyCode: 83, arrow: '▼', label: 'S', name: '下' },
-    { cls: 'right', key: 'd', code: 'KeyD', keyCode: 68, arrow: '▶', label: 'D', name: '右' },
-    { cls: 'space', key: ' ', code: 'Space', keyCode: 32, arrow: '', label: '空格', name: '空格' }
+    { cls: 'up', key: 'w', code: 'KeyW', keyCode: 87, label: 'W', name: '上' },
+    { cls: 'left', key: 'a', code: 'KeyA', keyCode: 65, label: 'A', name: '左' },
+    { cls: 'down', key: 's', code: 'KeyS', keyCode: 83, label: 'S', name: '下' },
+    { cls: 'right', key: 'd', code: 'KeyD', keyCode: 68, label: 'D', name: '右' },
+    { cls: 'space', key: ' ', code: 'Space', keyCode: 32, label: 'SPACE', name: '空格' }
   ];
 
   var CSS = [
-    '.yc-pad{--yc-pad-size:56px;--yc-pad-space-h:44px;position:fixed;right:16px;bottom:16px;z-index:2147483000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;line-height:1}',
+    '.yc-pad{--yc-pad-size:56px;--yc-pad-space-h:44px;--yc-pad-letter:22px;position:fixed;left:16px;bottom:16px;z-index:2147483000;display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-family:inherit;line-height:1;pointer-events:none}',
     '.yc-pad-keys{display:grid;grid-template-columns:repeat(3,var(--yc-pad-size));grid-template-rows:var(--yc-pad-size) var(--yc-pad-size) var(--yc-pad-space-h);gap:6px}',
-    '.yc-pad-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:var(--yc-pad-size);height:var(--yc-pad-size);padding:0;color:#fff;background:rgba(24,32,44,.72);border:1px solid rgba(255,255,255,.3);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent;transition:background-color .12s ease,transform .12s ease,border-color .12s ease}',
+    '.yc-pad-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:var(--yc-pad-size);height:var(--yc-pad-size);padding:0;color:#fff;background:rgba(24,32,44,.72);border:1px solid rgba(255,255,255,.3);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;transition:background-color .12s ease,transform .12s ease,border-color .12s ease}',
     '.yc-pad-btn.is-down{background:#4f9cf9;border-color:#4f9cf9;transform:scale(.94)}',
-    '.yc-pad-arrow{font-size:15px}',
-    '.yc-pad-key{font-size:10px;opacity:.7}',
+    '.yc-pad-key{font-size:var(--yc-pad-letter);font-weight:700;opacity:.95;letter-spacing:.5px}',
     '.yc-pad-up{grid-column:2;grid-row:1}',
     '.yc-pad-left{grid-column:1;grid-row:2}',
     '.yc-pad-down{grid-column:2;grid-row:2}',
     '.yc-pad-right{grid-column:3;grid-row:2}',
     '.yc-pad-space{grid-column:1 / span 3;grid-row:3;width:auto;height:var(--yc-pad-space-h);flex-direction:row;gap:6px}',
-    '.yc-pad-space .yc-pad-key{font-size:11px;opacity:.85}',
-    '.yc-pad-toggle{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;font-family:inherit;font-size:12px;line-height:1;color:#fff;background:rgba(24,32,44,.72);border:1px solid rgba(255,255,255,.3);border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}',
+    '.yc-pad-toggle{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;font-family:inherit;font-size:12px;line-height:1;color:#fff;background:rgba(24,32,44,.72);border:1px solid rgba(255,255,255,.3);border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;touch-action:manipulation;-webkit-touch-callout:none}',
     '.yc-pad-toggle:hover{border-color:#4f9cf9}',
     '.yc-pad.is-collapsed .yc-pad-keys{display:none}',
-    '@media (max-width:768px){.yc-pad{right:12px;bottom:12px;--yc-pad-size:58px;--yc-pad-space-h:46px}}'
+    '@media (max-width:768px){.yc-pad{left:12px;bottom:12px;--yc-pad-size:58px;--yc-pad-space-h:46px;--yc-pad-letter:26px}}'
   ].join('\n');
 
   var style = document.createElement('style');
@@ -56,7 +54,7 @@
   toggle.type = 'button';
   toggle.className = 'yc-pad-toggle';
   toggle.setAttribute('aria-expanded', 'true');
-  toggle.setAttribute('title', '显示 / 收起虚拟按键（W / A / S / D / 空格）');
+  toggle.setAttribute('title', '显示 / 收起虚拟按键（W / A / S / D / SPACE）');
   var toggleIcon = document.createElement('span');
   toggleIcon.setAttribute('aria-hidden', 'true');
   toggleIcon.textContent = '🎮';
@@ -96,6 +94,18 @@
   var isDown = {};
   var timers = {};
   var buttons = {};
+
+  /* 用户的显式选择：null = 没选过（按设备自动判断），'1' = 展开，'0' = 收起 */
+  var userChoice = null;
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem(STORE_KEY); } catch (e) {}
+    if (saved === '0' || saved === '1') { userChoice = saved; }
+  })();
+  function remember(value) {
+    userChoice = value;
+    try { localStorage.setItem(STORE_KEY, value); } catch (e) {}
+  }
 
   function press(spec) {
     if (isDown[spec.code]) { return; }
@@ -140,15 +150,10 @@
     btn.type = 'button';
     btn.className = 'yc-pad-btn yc-pad-' + spec.cls;
     btn.setAttribute('aria-label', spec.name + '（' + spec.label + '）');
-    var arrow = document.createElement('span');
-    arrow.className = 'yc-pad-arrow';
-    arrow.setAttribute('aria-hidden', 'true');
-    arrow.textContent = spec.arrow;
     var label = document.createElement('span');
     label.className = 'yc-pad-key';
     label.setAttribute('aria-hidden', 'true');
     label.textContent = spec.label;
-    if (spec.arrow) { btn.appendChild(arrow); }
     btn.appendChild(label);
     buttons[spec.code] = btn;
 
@@ -186,26 +191,65 @@
   });
 
   /* ---------- 显示 / 收回 ---------- */
-  function setCollapsed(collapsed) {
+  function setCollapsed(collapsed, rememberIt) {
     pad.classList.toggle('is-collapsed', collapsed);
     toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     toggleText.textContent = collapsed ? '按键' : '收起';
-    toggle.setAttribute('title', collapsed ? '显示虚拟按键（W / A / S / D / 空格）' : '收起虚拟按键');
+    toggle.setAttribute('title', collapsed ? '显示虚拟按键（W / A / S / D / SPACE）' : '收起虚拟按键');
     if (collapsed) { releaseAll(); }
-    try { localStorage.setItem(STORE_KEY, collapsed ? '0' : '1'); } catch (e) {}
+    if (rememberIt) { remember(collapsed ? '0' : '1'); }
+  }
+
+  /* 这台设备是不是“没有实体键盘”的设备（手机 / 平板）。
+     判断偏保守：不确定就当成“有键盘”，默认收起，用户点一下 🎮 就能展开。 */
+  function isTouchOnlyDevice() {
+    try {
+      var touchPoints = navigator.maxTouchPoints || 0;
+      if (touchPoints === 0) { return false; }   /* 完全没有触摸 → 一定是电脑 */
+      var ua = navigator.userAgent || '';
+      var mobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua);
+      if (window.matchMedia) {
+        var coarse = window.matchMedia('(pointer: coarse)').matches;
+        var noHover = window.matchMedia('(hover: none)').matches;
+        /* 主指针是手指、不能悬停：手机 / 平板 */
+        if (coarse && noHover) { return true; }
+        /* 有鼠标（能悬停）的触屏电脑，按“有键盘”处理 */
+        if (!noHover) { return false; }
+      }
+      return mobileUA;
+    } catch (e) { return false; }
+  }
+
+  /* 初始状态：没手动选过就按设备判断——没有键盘默认展开，有键盘默认收起 */
+  if (!userChoice) {
+    setCollapsed(!isTouchOnlyDevice(), false);
+  } else {
+    setCollapsed(userChoice === '0', false);
   }
 
   toggle.addEventListener('click', function () {
-    setCollapsed(!pad.classList.contains('is-collapsed'));
+    setCollapsed(!pad.classList.contains('is-collapsed'), true);
   });
 
   pad.appendChild(toggle);
   pad.appendChild(keysBox);
   (document.body || document.documentElement).appendChild(pad);
 
-  var saved = null;
-  try { saved = localStorage.getItem(STORE_KEY); } catch (e) {}
-  if (saved === '0') { setCollapsed(true); }
+  /* 触屏冲突：游戏在 document 上监听 mousemove / mouseup / touchmove / touchend，
+     按在悬浮键上的手指会被它当成瞄准或点击，所以这里把事件拦在悬浮键内部，不再往上冒泡。 */
+  [
+    'pointerdown', 'pointermove', 'pointerup', 'pointercancel',
+    'mousedown', 'mousemove', 'mouseup', 'click', 'dblclick',
+    'touchstart', 'touchmove', 'touchend', 'touchcancel', 'contextmenu'
+  ].forEach(function (type) {
+    pad.addEventListener(type, function (e) { e.stopPropagation(); }, { passive: false });
+  });
+
+  /* 真的按到实体键盘（isTrusted，排除虚拟键自己派发的事件）→ 判断这台设备有键盘，自动收起并记住 */
+  document.addEventListener('keydown', function (e) {
+    if (!e.isTrusted || userChoice) { return; }
+    setCollapsed(true, true);
+  }, true);
 
   /* 免得松手时按键卡住 */
   window.addEventListener('blur', releaseAll);
