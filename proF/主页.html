@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>叶初小游戏PC版</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+  }
+  .header {
+    background-color: #333;
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  .promo-images {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+  }
+  .promo-image {
+    width: 30%;
+    height: 22.5%;
+    margin: 0 1%;
+    border-radius: 5px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .column {
+    width: 23%;
+    margin-bottom: 20px;
+  }
+  .game-div {
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    transition: transform 0.3s ease;
+  }
+  .game-div:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  .game-title {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .game-description {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    line-height: 1.5;
+  }
+  a {
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>叶初小游戏</h1>
+</div>
+
+<div class="promo-images">
+  <img class="promo-image" src="叶初专业团队.jpg" alt="叶初">
+  <img class="promo-image" src="YeChu.png" alt="叶初">
+  <img class="promo-image" src="叶初城墙合照.jpg" alt="叶初">
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="column">
+      <div class="game-div" onclick="location.href='CS平面版.html';">
+        <h3 class="game-title">CS平面版</h3>
+        <p class="game-description">WASD控制玩家运动，鼠标负责瞄准，Q键或点按鼠标射击</p>
+      </div>
+      <br>
+      <div class="game-div" onclick="location.href='练习模拟器.html';">
+        <h3 class="game-title">练习模拟器</h3>
+        <p class="game-description">通过一定手速的点按鼠标帮助角色练习，练习时间越短越好</p>
+      </div>
+      <br>
+      <div class="game-div" onclick="location.href='youxi';">
+        <h3 class="game-title">正在开发</h3>
+        <p class="game-description">正在开发<br>正在开发</p>
+      </div>
+      <!-- 更多游戏div -->
+    </div>
+    <div class="column">
+        <div class="game-div" onclick="location.href='叶初弹弹乐.html';">
+          <h3 class="game-title">叶初弹弹乐</h3>
+          <p class="game-description">通过鼠标控制托盘，使弹球不落到地上，弹球之间有机率互相打架</p>
+        </div>
+        <br>
+        <div class="game-div" onclick="location.href='叶初打飞机.html';">
+          <h3 class="game-title">叶初打飞机</h3>
+          <p class="game-description">通过鼠标控制战机，Q键或点按鼠标射击，不要碰到敌机</p>
+        </div>
+        <br>
+        <div class="game-div" onclick="location.href='game1-link';">
+          <h3 class="game-title">正在开发</h3>
+          <p class="game-description">正在开发<br>正在开发</p>
+        </div>
+        <!-- 更多游戏div -->
+      </div>
+    
+      <div class="column">
+        <div class="game-div" onclick="location.href='双人足球.html';">
+          <h3 class="game-title">双人足球</h3>
+          <p class="game-description">WASD控制玩家移动，碰到球之后自动射击，注意不要频繁出界</p>
+        </div>
+        <br>
+        <div class="game-div" onclick="location.href='叶初全明星.html';">
+          <h3 class="game-title">叶初全明星</h3>
+          <p class="game-description">通过点按角色和键盘设置角色状态，8键运动模式，9键退出</p>
+        </div>
+        <br>
+        <div class="game-div" onclick="location.href='game1-link';">
+          <h3 class="game-title">正在开发</h3>
+          <p class="game-description">正在开发<br>正在开发</p>
+        </div>
+        <!-- 更多游戏div -->
+      </div>
+
+    <div class="column">
+      <div class="game-div" onclick="location.href='任意球练习.html';">
+        <h3 class="game-title">任意球练习</h3>
+        <p class="game-description">射门时AD键控制射门角度，守门时通过点击鼠标选择防守点位</p>
+      </div>
+      <br>
+      <div class="game-div" onclick="location.href='game1-link';">
+        <h3 class="game-title">正在开发</h3>
+        <p class="game-description">正在开发<br>正在开发</p>
+      </div>
+      <br>
+      <div class="game-div" onclick="location.href='game1-link';">
+        <h3 class="game-title">正在开发</h3>
+        <p class="game-description">正在开发<br>正在开发</p>
+      </div>
+      <!-- 更多游戏div -->
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

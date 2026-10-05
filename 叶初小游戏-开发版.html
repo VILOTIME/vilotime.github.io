@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    
+    <title>叶初小游戏</title>
+    <style>
+        /* 在这里添加CSS样式 */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #f1f1f1;
+            padding: 10px;
+        }
+        .sidebar a {
+            display: block;
+            padding: 5px;
+            text-decoration: none;
+            color: black;
+        }
+        .sidebar a:hover {
+            background-color: #ddd;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 10px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>导航列表</h2>
+        <!-- 游戏列表 -->
+        <a href="proF/主页.html" target="gameFrame">主页</a>
+        <a href="proF/CS平面版.html" target="gameFrame">CS平面版</a>
+        <a href="proF/叶初弹弹乐.html" target="gameFrame">叶初弹弹乐</a>
+        <a href="proF/双人足球.html" target="gameFrame">双人足球</a>
+        <a href="proF/任意球练习.html" target="gameFrame">任意球练习</a>
+        <a href="proF/练习模拟器.html" target="gameFrame">练习模拟器</a>
+        <a href="proF/叶初打飞机.html" target="gameFrame">叶初打飞机</a>
+        <a href="proF/叶初全明星.html" target="gameFrame">叶初全明星</a>
+        <!-- 更多游戏链接 -->
+    </div>
+    
+    <div class="content">
+        <!-- 游戏显示区域 -->
+        <iframe name="gameFrame" src="proF/主页.html"></iframe>
+    </div>
+
+</body>
+</html>
