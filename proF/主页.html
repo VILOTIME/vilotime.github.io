@@ -4,26 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>叶初小游戏PC版</title>
+<script>
+  /* 提前决定主题，避免首屏闪白/闪黑 */
+  (function () {
+    var s = null;
+    try { s = localStorage.getItem('yc-theme'); } catch (e) {}
+    var dark = (s === 'dark') || (s !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  })();
+</script>
 <style>
   * {
     box-sizing: border-box;
+  }
+  :root {
+    color-scheme: light;
+    --bg: #eef2f7;
+    --glow: rgba(79, 156, 249, 0.16);
+    --header-from: #2b3a4b;
+    --header-to: #3f5a78;
+    --header-shadow: 0 4px 18px rgba(20, 35, 55, 0.18);
+    --accent: #4f9cf9;
+    --card-bg: #ffffff;
+    --card-border: #e4eaf2;
+    --card-border-hover: #b9d2f2;
+    --card-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 10px 22px -14px rgba(16, 24, 40, 0.22);
+    --card-shadow-hover: 0 4px 10px rgba(16, 24, 40, 0.07), 0 16px 28px -14px rgba(37, 99, 235, 0.42);
+    --title: #1f2d3d;
+    --header-text: #ffffff;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f141a;
+    --glow: rgba(90, 166, 255, 0.18);
+    --header-from: #171f2a;
+    --header-to: #24344a;
+    --header-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    --accent: #5aa6ff;
+    --card-bg: #19212c;
+    --card-border: #2a3546;
+    --card-border-hover: #3d5b86;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 10px 22px -14px rgba(0, 0, 0, 0.75);
+    --card-shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.55), 0 16px 28px -14px rgba(90, 166, 255, 0.35);
+    --title: #e6edf6;
+    --header-text: #eaf1fb;
   }
   body {
     font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #eef2f7;
-    background-image: radial-gradient(circle at 50% 0, rgba(79,156,249,0.16), rgba(238,242,247,0) 55%);
+    background-color: var(--bg);
+    background-image: radial-gradient(circle at 50% 0, var(--glow), rgba(0, 0, 0, 0) 55%);
     background-repeat: no-repeat;
     min-height: 100vh;
     -webkit-text-size-adjust: 100%;
+    transition: background-color 0.3s ease;
   }
   .header {
-    background-image: linear-gradient(135deg, #2b3a4b 0%, #3f5a78 100%);
-    color: #fff;
+    position: relative;
+    background-image: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
+    color: var(--header-text);
     padding: 24px 16px 20px;
     text-align: center;
-    box-shadow: 0 4px 18px rgba(20,35,55,0.18);
+    box-shadow: var(--header-shadow);
   }
   .header h1 {
     margin: 0;
@@ -39,7 +82,7 @@
     height: 3px;
     margin: 10px auto 0;
     border-radius: 2px;
-    background-color: #4f9cf9;
+    background-color: var(--accent);
   }
   .container {
     max-width: 1160px;
@@ -57,7 +100,7 @@
   .game-div {
     position: relative;
     overflow: hidden;
-    flex: 0 0 300px;
+    flex: 0 0 260px;
     height: 160px;
     display: flex;
     flex-direction: column;
@@ -65,11 +108,11 @@
     justify-content: center;
     gap: 10px;
     padding: 12px;
-    background-color: #fff;
-    border: 1px solid #e4eaf2;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(16,24,40,0.06), 0 10px 22px -14px rgba(16,24,40,0.22);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
     cursor: pointer;
     text-align: center;
     user-select: none;
@@ -86,14 +129,14 @@
     width: 52px;
     height: 3px;
     border-radius: 0 0 3px 3px;
-    background-color: #4f9cf9;
+    background-color: var(--accent);
     transform: translateX(-50%) scaleX(0);
     transition: transform 0.3s ease;
   }
   .game-div:hover {
     transform: translateY(-4px);
-    border-color: #b9d2f2;
-    box-shadow: 0 4px 10px rgba(16,24,40,0.07), 0 16px 28px -14px rgba(37,99,235,0.42);
+    border-color: var(--card-border-hover);
+    box-shadow: var(--card-shadow-hover);
   }
   .game-div:hover::before {
     transform: translateX(-50%) scaleX(1);
@@ -110,7 +153,7 @@
     font-size: 18px;
     font-weight: 600;
     line-height: 1.3;
-    color: #1f2d3d;
+    color: var(--title);
     word-break: break-word;
   }
 
@@ -152,8 +195,8 @@
   @media (hover: none) {
     .game-div:hover {
       transform: none;
-      border-color: #e4eaf2;
-      box-shadow: 0 1px 3px rgba(16,24,40,0.06), 0 10px 22px -14px rgba(16,24,40,0.22);
+      border-color: var(--card-border);
+      box-shadow: var(--card-shadow);
     }
     .game-div:hover::before {
       transform: translateX(-50%) scaleX(0);
@@ -176,10 +219,6 @@
       <span class="game-icon" aria-hidden="true">🎯</span>
       <h3 class="game-title">CS平面版</h3>
     </div>
-    <div class="game-div" onclick="location.href='叶初弹弹乐.html';">
-      <span class="game-icon" aria-hidden="true">🏓</span>
-      <h3 class="game-title">叶初弹弹乐</h3>
-    </div>
     <div class="game-div" onclick="location.href='叶初打飞机.html';">
       <span class="game-icon" aria-hidden="true">✈️</span>
       <h3 class="game-title">叶初打飞机</h3>
@@ -188,10 +227,6 @@
       <span class="game-icon" aria-hidden="true">⚽</span>
       <h3 class="game-title">双人足球</h3>
     </div>
-    <div class="game-div" onclick="location.href='叶初全明星.html';">
-      <span class="game-icon" aria-hidden="true">⭐</span>
-      <h3 class="game-title">叶初全明星</h3>
-    </div>
     <div class="game-div" onclick="location.href='任意球练习.html';">
       <span class="game-icon" aria-hidden="true">🥅</span>
       <h3 class="game-title">任意球练习</h3>
@@ -199,6 +234,46 @@
     <!-- 更多游戏div -->
   </div>
 </div>
+
+<script>
+/* 主页只负责跟随主题；切换按钮统一放在外壳页面 index.html */
+(function () {
+  var KEY = 'yc-theme';
+  var root = document.documentElement;
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function stored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function resolved() {
+    var s = stored();
+    if (s === 'dark' || s === 'light') { return s; }
+    return (mq && mq.matches) ? 'dark' : 'light';
+  }
+  function apply() {
+    root.setAttribute('data-theme', resolved());
+  }
+
+  /* 供外壳页面调用 */
+  window.__ycApplyTheme = apply;
+
+  apply();
+
+  /* 与外壳页面（index.html）互相同步 */
+  window.addEventListener('storage', function (e) {
+    if (!e || e.key === KEY || e.key === null) { apply(); }
+  });
+  /* 兜底：即使 storage 事件没有及时送达，也能把主题对齐 */
+  setInterval(function () {
+    if (root.getAttribute('data-theme') !== resolved()) { apply(); }
+  }, 1000);
+  if (mq) {
+    var onSystemChange = function () { if (!stored()) { apply(); } };
+    if (mq.addEventListener) { mq.addEventListener('change', onSystemChange); }
+    else if (mq.addListener) { mq.addListener(onSystemChange); }
+  }
+})();
+</script>
 
 </body>
 </html>

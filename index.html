@@ -4,29 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>叶初小游戏</title>
+    <script>
+        /* 提前决定主题，避免首屏闪白/闪黑 */
+        (function () {
+            var s = null;
+            try { s = localStorage.getItem('yc-theme'); } catch (e) {}
+            var dark = (s === 'dark') || (s !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        })();
+    </script>
     <style>
         /* 在这里添加CSS样式 */
+        :root {
+            color-scheme: light;
+            --shell-bg: #f1f1f1;
+            --shell-content-bg: #eef2f7;
+            --shell-text: #1f2d3d;
+            --shell-hover: #dde3ea;
+            --shell-btn-bg: #ffffff;
+            --shell-btn-border: #d6dce5;
+            --shell-accent: #4f9cf9;
+        }
+        html[data-theme="dark"] {
+            color-scheme: dark;
+            --shell-bg: #161c26;
+            --shell-content-bg: #0f141a;
+            --shell-text: #dbe4f0;
+            --shell-hover: #26313f;
+            --shell-btn-bg: #1b2230;
+            --shell-btn-border: #2f3b4d;
+            --shell-accent: #5aa6ff;
+        }
         body {
-            font-family: Arial, sans-serif;
+            font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
             display: flex;
             height: 100vh;
             margin: 0;
+            background-color: var(--shell-content-bg);
             -webkit-text-size-adjust: 100%;
         }
         .sidebar {
             width: 200px;
-            background-color: #f1f1f1;
+            background-color: var(--shell-bg);
             padding: 10px;
             box-sizing: border-box;
+            color: var(--shell-text);
+        }
+        .sidebar h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
         }
         .sidebar a {
             display: block;
             padding: 5px;
             text-decoration: none;
-            color: black;
+            color: var(--shell-text);
+            border-radius: 4px;
         }
         .sidebar a:hover {
-            background-color: #ddd;
+            background-color: var(--shell-hover);
+        }
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 10px;
+            padding: 5px 11px;
+            font-family: inherit;
+            font-size: 12px;
+            line-height: 1;
+            color: var(--shell-text);
+            background-color: var(--shell-btn-bg);
+            border: 1px solid var(--shell-btn-border);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .theme-toggle:hover {
+            border-color: var(--shell-accent);
+        }
+        .theme-toggle:active {
+            transform: scale(0.96);
+        }
+        .theme-icon {
+            font-size: 13px;
+            line-height: 1;
         }
         .content {
             flex-grow: 1;
@@ -38,6 +102,7 @@
             width: 100%;
             height: 100%;
             border: none;
+            display: block;
         }
 
         /* 移动端适配：导航改为顶部横向滚动条 */
@@ -63,11 +128,21 @@
                 font-size: 14px;
                 white-space: nowrap;
             }
+            .theme-toggle {
+                flex: 0 0 auto;
+                order: -1;
+                margin: 0;
+                padding: 7px;
+                border-radius: 50%;
+            }
+            .theme-text {
+                display: none;
+            }
             .sidebar a {
                 flex: 0 0 auto;
                 padding: 6px 10px;
-                background-color: #fff;
-                border: 1px solid #ddd;
+                background-color: var(--shell-btn-bg);
+                border: 1px solid var(--shell-btn-border);
                 border-radius: 4px;
                 font-size: 13px;
                 white-space: nowrap;
@@ -77,23 +152,22 @@
                 padding: 0;
                 min-height: 0;
             }
-            iframe {
-                display: block;
-            }
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <h2>导航列表</h2>
+        <button type="button" class="theme-toggle" id="themeToggle" title="切换主题">
+            <span class="theme-icon" aria-hidden="true">🖥️</span>
+            <span class="theme-text">跟随系统</span>
+        </button>
         <!-- 游戏列表 -->
         <a href="proF/主页.html" target="gameFrame">主页</a>
         <a href="proF/CS平面版.html" target="gameFrame">CS平面版</a>
-        <a href="proF/叶初弹弹乐.html" target="gameFrame">叶初弹弹乐</a>
+        <a href="proF/叶初打飞机.html" target="gameFrame">叶初打飞机</a>
         <a href="proF/双人足球.html" target="gameFrame">双人足球</a>
         <a href="proF/任意球练习.html" target="gameFrame">任意球练习</a>
-        <a href="proF/叶初打飞机.html" target="gameFrame">叶初打飞机</a>
-        <a href="proF/叶初全明星.html" target="gameFrame">叶初全明星</a>
         <!-- 更多游戏链接 -->
     </div>
     
@@ -101,6 +175,88 @@
         <!-- 游戏显示区域 -->
         <iframe name="gameFrame" src="proF/主页.html"></iframe>
     </div>
+
+<script>
+/* ---------- 主题切换 ---------- */
+(function () {
+    var KEY = 'yc-theme';
+    var root = document.documentElement;
+    var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    var btn = document.getElementById('themeToggle');
+
+    function stored() {
+        try { return localStorage.getItem(KEY); } catch (e) { return null; }
+    }
+    function resolved() {
+        var s = stored();
+        if (s === 'dark' || s === 'light') { return s; }
+        return (mq && mq.matches) ? 'dark' : 'light';
+    }
+    function apply() {
+        var mode = resolved();
+        root.setAttribute('data-theme', mode);
+        if (!btn) { return; }
+        var s = stored();
+        var label = s === 'dark' ? '深色' : (s === 'light' ? '浅色' : '跟随系统');
+        var icon = s === 'dark' ? '🌙' : (s === 'light' ? '☀️' : '🖥️');
+        btn.querySelector('.theme-icon').textContent = icon;
+        btn.querySelector('.theme-text').textContent = label;
+        var tip = s
+            ? '当前：' + label + '（点击切换为' + (mode === 'dark' ? '浅色' : '深色') + '，右键恢复跟随系统）'
+            : '当前：跟随系统（点击切换主题）';
+        btn.setAttribute('title', tip);
+        btn.setAttribute('aria-label', tip);
+    }
+    function save(mode) {
+        try {
+            if (mode) { localStorage.setItem(KEY, mode); } else { localStorage.removeItem(KEY); }
+        } catch (e) {}
+        apply();
+    }
+    /* 把主题立刻推给内嵌的游戏页面（同源时生效） */
+    function pushToFrame() {
+        try {
+            var f = document.querySelector('iframe[name="gameFrame"]');
+            if (f && f.contentWindow && typeof f.contentWindow.__ycApplyTheme === 'function') {
+                f.contentWindow.__ycApplyTheme();
+            }
+        } catch (e) {}
+    }
+    function commit(mode) {
+        save(mode);
+        pushToFrame();
+    }
+
+    if (btn) {
+        btn.addEventListener('click', function () {
+            commit(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+        btn.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            commit(null);
+        });
+    }
+
+    /* 供内嵌页面调用 */
+    window.__ycApplyTheme = apply;
+
+    apply();
+
+    /* 与内嵌的主页页面互相同步 */
+    window.addEventListener('storage', function (e) {
+        if (!e || e.key === KEY || e.key === null) { apply(); }
+    });
+    /* 兜底：即使 storage 事件没有及时送达，也能把主题对齐 */
+    setInterval(function () {
+        if (root.getAttribute('data-theme') !== resolved()) { apply(); }
+    }, 1000);
+    if (mq) {
+        var onSystemChange = function () { if (!stored()) { apply(); } };
+        if (mq.addEventListener) { mq.addEventListener('change', onSystemChange); }
+        else if (mq.addListener) { mq.addListener(onSystemChange); }
+    }
+})();
+</script>
 
 </body>
 </html>
