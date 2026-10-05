@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>叶初小游戏</title>
     <style>
         /* 在这里添加CSS样式 */
@@ -10,11 +10,14 @@
             font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
+            margin: 0;
+            -webkit-text-size-adjust: 100%;
         }
         .sidebar {
             width: 200px;
             background-color: #f1f1f1;
             padding: 10px;
+            box-sizing: border-box;
         }
         .sidebar a {
             display: block;
@@ -28,11 +31,55 @@
         .content {
             flex-grow: 1;
             padding: 10px;
+            box-sizing: border-box;
+            min-width: 0;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+        }
+
+        /* 移动端适配：导航改为顶部横向滚动条 */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: 100dvh;
+                overflow: hidden;
+            }
+            .sidebar {
+                width: 100%;
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 6px;
+                padding: 8px;
+            }
+            .sidebar h2 {
+                flex: 0 0 auto;
+                margin: 0 4px 0 0;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+            .sidebar a {
+                flex: 0 0 auto;
+                padding: 6px 10px;
+                background-color: #fff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            .content {
+                flex: 1 1 auto;
+                padding: 0;
+                min-height: 0;
+            }
+            iframe {
+                display: block;
+            }
         }
     </style>
 </head>
