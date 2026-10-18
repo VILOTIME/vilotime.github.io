@@ -83,7 +83,19 @@
     opacity: 0; transition: opacity .18s ease; pointer-events: none;
   }
   #msg.show { opacity: 1; }
-</style>
+  /* 全屏按钮 */
+  #fsBtn {
+    position: absolute; top: 10px; right: 10px; z-index: 5;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px;
+    font-family: inherit; font-size: 12px; line-height: 1;
+    color: #eaf1fb; background: rgba(10,16,24,.62);
+    border: 1px solid rgba(255,255,255,.16); cursor: pointer;
+    transition: background-color .2s ease, border-color .2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #fsBtn:hover { border-color: #4f9cf6; }
+  #fsBtn:active { transform: scale(.96); }</style>
 </head>
 <body>
 <div id="wrap">
@@ -95,6 +107,8 @@
       <span class="tag"><span class="dot" style="background:#ff5d5d"></span>玩家2</span>
     </div>
     <div id="msg"></div>
+    <button id="fsBtn" type="button" title="全屏 / 退出全屏（F）"><span aria-hidden="true">⛶</span><span id="fsText">全屏</span></button>
+
   </div>
 </div>
 
@@ -310,6 +324,9 @@ function update(dt) {
   }
   movePlayer(p1, keys.w, keys.s, keys.a, keys.d, dt);
   movePlayer(p2, keys.i, keys.k, keys.j, keys.l, dt);
+  /* 半场限制：玩家1 只能待在左半场，玩家2 只能待在右半场（贴线即停，不产生抖动） */
+  if (p1.x > -p1.r) { p1.x = -p1.r; if (p1.vx > 0) { p1.vx = 0; } }
+  if (p2.x < p2.r) { p2.x = p2.r; if (p2.vx < 0) { p2.vx = 0; } }
   collidePlayers(p1, p2);
   stepBall(dt);
   collideBall(p1);
@@ -383,7 +400,59 @@ function tick(ts) {
   if (acc < 0) { acc = 0; }
   draw();
 }
-function loop(ts) { tick(ts); requestAnimationFrame(loop); }
+function loop(ts) { tick(ts); /* ============ 全屏切换 ============ */
+var fsBtn = document.getElementById('fsBtn');
+var fsText = document.getElementById('fsText');
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (!isFull()) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { req.call(el).catch(function () {}); }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { exit.call(document).catch(function () {}); }
+  }
+}
+function syncFsLabel() {
+  var on = isFull();
+  if (fsText) { fsText.textContent = on ? '退出全屏' : '全屏'; }
+  if (fsBtn) { fsBtn.title = on ? '退出全屏（F）' : '全屏（F）'; }
+}
+if (fsBtn) { fsBtn.addEventListener('click', toggleFullscreen); }
+document.addEventListener('fullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
+document.addEventListener('webkitfullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
+window.addEventListener('keydown', function (e) {
+  if ((e.key || '').toLowerCase() === 'f') { toggleFullscreen(); e.preventDefault(); }
+});
+syncFsLabel();
+requestAnimationFrame(loop); }
+/* ============ 全屏切换 ============ */
+var fsBtn = document.getElementById('fsBtn');
+var fsText = document.getElementById('fsText');
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (!isFull()) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { req.call(el).catch(function () {}); }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { exit.call(document).catch(function () {}); }
+  }
+}
+function syncFsLabel() {
+  var on = isFull();
+  if (fsText) { fsText.textContent = on ? '退出全屏' : '全屏'; }
+  if (fsBtn) { fsBtn.title = on ? '退出全屏（F）' : '全屏（F）'; }
+}
+if (fsBtn) { fsBtn.addEventListener('click', toggleFullscreen); }
+document.addEventListener('fullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
+document.addEventListener('webkitfullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
+window.addEventListener('keydown', function (e) {
+  if ((e.key || '').toLowerCase() === 'f') { toggleFullscreen(); e.preventDefault(); }
+});
+syncFsLabel();
 requestAnimationFrame(loop);
 /* 兜底：后台标签页或没有合成器的环境里 requestAnimationFrame 不会触发，用定时器保证游戏继续跑 */
 setInterval(function () {
