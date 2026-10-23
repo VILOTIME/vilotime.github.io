@@ -1,0 +1,85 @@
+/* 叶初小游戏 · 统一视觉基础样式
+ * 所有重写后的游戏都引用这个文件，保证风格一致。
+ * 配色：#0b1220 深底 / #4f9cf9 主蓝 / #ffd166 金色高亮 / #e9f1fb 文字
+ */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, #16243a 0%, #080b12 72%);
+  font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
+  color: #e9f1fb; user-select: none; -webkit-user-select: none;
+}
+#wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px; }
+#stage { position: relative; }
+canvas {
+  display: block; border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.12) inset;
+}
+#hud {
+  position: absolute; top: 10px; left: 10px; right: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  pointer-events: none; font-size: 14px; letter-spacing: .3px;
+}
+.chip {
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(8,14,24,.55); border: 1px solid rgba(120,180,255,.18);
+  backdrop-filter: blur(4px);
+}
+.chip b { color: #9fe0ff; font-variant-numeric: tabular-nums; }
+.chip .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.overlay {
+  position: absolute; inset: 0; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  background: rgba(6,10,18,.78); backdrop-filter: blur(3px); z-index: 10; padding: 16px;
+}
+.overlay.hidden { display: none; }
+.panel { padding: 20px 26px; max-width: 92%; }
+.panel h1 { margin: 0 0 8px; font-size: 25px; letter-spacing: 2px; }
+.panel p { margin: 6px 0; font-size: 13px; line-height: 1.8; color: #a7bbd8; }
+.panel kbd {
+  display: inline-block; min-width: 22px; padding: 2px 7px; margin: 0 1px;
+  border-radius: 6px; font-size: 12px; font-weight: 700; font-family: inherit;
+  background: #253247; border: 1px solid #3a4c69; border-bottom-width: 3px; color: #dce7f7;
+}
+.btn {
+  margin-top: 16px; padding: 11px 26px; font-family: inherit; font-size: 15px; font-weight: 700;
+  letter-spacing: 1px; color: #fff; background: linear-gradient(135deg, #2f7bf6, #4f9cf9);
+  border: none; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 8px 22px rgba(47,123,246,.45);
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.btn:active { transform: scale(.96); }
+.btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,.25); box-shadow: none; color: #cfe0f7; }
+#banner {
+  position: absolute; left: 0; right: 0; top: 42%; transform: translateY(-50%);
+  font-size: clamp(14px, 3.8vw, 21px); font-weight: 800; letter-spacing: clamp(1px, .6vw, 3px);
+  color: #ffd166; text-align: center; white-space: nowrap;
+  text-shadow: 0 4px 20px rgba(0,0,0,.85); opacity: 0; transition: opacity .2s ease; pointer-events: none;
+}
+#banner.show { opacity: 1; }
+#hint {
+  position: absolute; left: 0; right: 0; bottom: 8px;
+  font-size: clamp(10px, 2.6vw, 12px); color: rgba(200,220,245,.75); letter-spacing: 1px;
+  text-align: center; pointer-events: none; white-space: nowrap;
+}
+.tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 6; }
+.tool-btn {
+  padding: 7px 12px; border-radius: 999px; font-family: inherit; font-size: 12px; line-height: 1;
+  color: #eaf1fb; background: rgba(10,16,24,.62); border: 1px solid rgba(255,255,255,.16);
+  cursor: pointer; transition: border-color .2s ease;
+}
+.tool-btn:hover { border-color: #4f9cf9; }
+.tool-btn:active { transform: scale(.96); }
+
+/* 小屏（手机）：字号整体缩小一档，避免文字挤出棋盘或换行 */
+@media (max-width: 560px) {
+  .panel { padding: 14px 16px; }
+  .panel h1 { font-size: 19px; letter-spacing: 1px; }
+  .panel p { font-size: 12px; line-height: 1.65; margin: 4px 0; }
+  .panel kbd { font-size: 11px; min-width: 18px; padding: 1px 5px; }
+  .btn { margin-top: 12px; padding: 10px 20px; font-size: 14px; }
+  #hud { font-size: 12px; top: 6px; left: 6px; right: 6px; }
+  .chip { padding: 4px 9px; }
+  .tools { top: 6px; right: 6px; }
+  .tool-btn { font-size: 11px; padding: 5px 9px; }
+}

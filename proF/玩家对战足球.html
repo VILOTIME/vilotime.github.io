@@ -2,152 +2,61 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>玩家对战足球</title>
+<link rel="stylesheet" href="yc-ui.css">
 <style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    background: #10151c;
-    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
-    color: #eaeff7;
-    overflow: hidden;
-    -webkit-user-select: none; user-select: none;
-  }
-  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  #stage { position: relative; max-width: 100%; max-height: 100%; }
-  canvas { display: block; border-radius: 12px; box-shadow: 0 18px 44px rgba(0,0,0,.55); background: #16301a; }
-  #hud {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 14px;
-    padding: 6px 16px; border-radius: 999px;
-    background: rgba(10,16,24,.62); border: 1px solid rgba(255,255,255,.14);
-    font-size: 15px; letter-spacing: 1px; white-space: nowrap;
-  }
-  #hud .tag { display: flex; align-items: center; gap: 6px; font-weight: 700; }
-  #hud .dot { width: 11px; height: 11px; border-radius: 50%; }
-  #hud .score { font-variant-numeric: tabular-nums; }
-  #hud .vs { opacity: .5; }
-  .overlay {
-    position: fixed; inset: 0; z-index: 20;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(8,12,18,.78); backdrop-filter: blur(3px);
-    padding: 20px;
-  }
-  .overlay.hidden { display: none; }
-  .card {
-    width: min(560px, 100%);
-    background: linear-gradient(180deg, #1b2432, #141b26);
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: 16px;
-    padding: 22px 24px 20px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.6);
-  }
-  .card h1 { margin: 0 0 4px; font-size: 21px; letter-spacing: 1px; }
-  .card .sub { margin: 0 0 16px; font-size: 12px; color: #93a4bb; letter-spacing: .5px; }
-  .row { display: flex; align-items: flex-start; gap: 12px; margin: 12px 0; }
-  .pill {
-    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
-    padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 700;
-    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
-  }
-  .pill .dot { width: 11px; height: 11px; border-radius: 50%; }
-  .keys { display: flex; gap: 6px; flex-wrap: wrap; }
-  kbd {
-    display: inline-block; min-width: 24px; text-align: center;
-    padding: 3px 7px; border-radius: 6px; font-size: 12px; font-weight: 700;
-    background: #253247; border: 1px solid #3a4c69; border-bottom-width: 3px;
-    color: #dce7f7; font-family: inherit;
-  }
-  .desc { font-size: 13px; line-height: 1.6; color: #b9c7db; }
-  .desc b { color: #fff; }
-  .actions { display: flex; gap: 10px; margin-top: 18px; }
-  button {
-    font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 1px;
-    padding: 10px 20px; border-radius: 10px; cursor: pointer;
-    border: 1px solid transparent; transition: transform .12s ease, background-color .2s ease, border-color .2s ease;
-  }
-  button:active { transform: scale(.97); }
-  #start { flex: 1; background: #2f7bf6; border-color: #2f7bf6; color: #fff; }
-  #start:hover { background: #3d88ff; }
-  #howto { background: transparent; border-color: rgba(255,255,255,.25); color: #cfe0f7; }
-  #howto:hover { border-color: #4f9cf9; }
-  #mobileBox { text-align: center; }
-  #mobileBox .big { font-size: 44px; margin-bottom: 10px; }
-  #mobileBox h1 { font-size: 20px; margin: 0 0 10px; }
-  #mobileBox p { color: #a9b8cd; font-size: 13px; line-height: 1.7; margin: 0; }
-  #msg {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    font-size: 40px; font-weight: 800; letter-spacing: 4px; color: #fff;
-    text-shadow: 0 6px 24px rgba(0,0,0,.7);
-    opacity: 0; transition: opacity .18s ease; pointer-events: none;
-  }
+  #msg { position: absolute; left: 0; right: 0; top: 46%; transform: translateY(-50%);
+    font-size: clamp(15px, 4.4vw, 26px); font-weight: 800; letter-spacing: clamp(1px, .7vw, 4px); color: #fff;
+    text-align: center; white-space: nowrap;
+    text-shadow: 0 6px 24px rgba(0,0,0,.75); opacity: 0; transition: opacity .18s ease; pointer-events: none; }
   #msg.show { opacity: 1; }
-  /* 全屏按钮 */
-  #fsBtn {
-    position: absolute; top: 10px; right: 10px; z-index: 5;
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: 999px;
-    font-family: inherit; font-size: 12px; line-height: 1;
-    color: #eaf1fb; background: rgba(10,16,24,.62);
-    border: 1px solid rgba(255,255,255,.16); cursor: pointer;
-    transition: background-color .2s ease, border-color .2s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #fsBtn:hover { border-color: #4f9cf6; }
-  #fsBtn:active { transform: scale(.96); }</style>
+  #hud .chip kbd { font-size: clamp(9px, 2.4vw, 11px); padding: 1px clamp(3px, .9vw, 5px); border-bottom-width: 2px; margin-left: 4px; }
+</style>
 </head>
 <body>
 <div id="wrap">
   <div id="stage">
     <canvas id="cv"></canvas>
     <div id="hud">
-      <span class="tag"><span class="dot" style="background:#4f9cf9"></span>玩家1</span>
-      <span class="score"><span id="s1">0</span> : <span id="s2">0</span></span>
-      <span class="tag"><span class="dot" style="background:#ff5d5d"></span>玩家2</span>
+      <div class="chip"><span class="dot" style="background:#4f9cf9"></span>玩家1<kbd>WASD</kbd></div>
+      <div class="chip"><b id="s1">0</b> : <b id="s2">0</b></div>
+      <div class="chip"><span class="dot" style="background:#ff5d5d"></span>玩家2<kbd>IJKL</kbd></div>
     </div>
+    <div id="banner"></div>
     <div id="msg"></div>
-    <button id="fsBtn" type="button" title="全屏 / 退出全屏（F）"><span aria-hidden="true">⛶</span><span id="fsText">全屏</span></button>
-
-  </div>
-</div>
-
-<div id="intro" class="overlay">
-  <div class="card">
-    <h1>玩家对战足球</h1>
-    <p class="sub">同一台电脑 · 双人对战 · 仅支持电脑（需要键盘）</p>
-    <div class="row">
-      <span class="pill"><span class="dot" style="background:#4f9cf9"></span>玩家1（蓝）</span>
-      <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+    <div id="hint"></div>
+    <div class="tools">
+      <button class="tool-btn" id="fsBtn" type="button" title="全屏（F）">⛶ 全屏</button>
     </div>
-    <div class="row">
-      <span class="pill"><span class="dot" style="background:#ff5d5d"></span>玩家2（红）</span>
-      <div class="keys"><kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
+    <div class="overlay" id="intro">
+      <div class="panel">
+        <h1>玩家对战足球</h1>
+        <p>同一台电脑 · 双人对战 · 先进 5 球获胜</p>
+        <p>玩家1（蓝）<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>　玩家2（红）<kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></p>
+        <p>各自只能在自己半场活动　<kbd>R</kbd> 重开　<kbd>Esc</kbd> 再看说明</p>
+        <button class="btn" id="start" type="button">开始游戏</button>
+        <button class="btn ghost" id="howto" type="button">直接开始</button>
+      </div>
     </div>
-    <div class="desc">
-      <b>玩法：</b>用圆圈把球撞进对方球门得分，先到 <b>5 分</b> 获胜。<br>
-      <b>玩家1</b> 守左边球门、进攻右边；<b>玩家2</b> 守右边球门、进攻左边。<br>
-      <b>Esc</b> 重新打开本说明，<b>R</b> 重新开始比赛。
-    </div>
-    <div class="actions">
-      <button id="start" type="button">开始游戏</button>
-      <button id="howto" type="button">关闭</button>
+    <div class="overlay hidden" id="over">
+      <div class="panel">
+        <h1 id="overTitle">比赛结束</h1>
+        <p>最终比分 <b id="finalScore">0 : 0</b></p>
+        <button class="btn" id="retryBtn" type="button">再来一局</button>
+      </div>
     </div>
   </div>
 </div>
+    <div class="overlay hidden" id="mobile">
+      <div class="panel">
+        <h1>这个游戏只能在电脑上玩</h1>
+        <p>「玩家对战足球」需要两个人在同一台电脑上各用一半键盘对战，手机没有键盘无法游玩。</p>
+        <p>请用电脑打开本页面，或回到主页选择其他游戏。</p>
+        <button class="btn" id="backHome" type="button">返回主页</button>
+      </div>
+    </div><script>document.addEventListener("DOMContentLoaded", function () { var rb = document.getElementById("retryBtn"); if (rb) { rb.addEventListener("click", function () { location.reload(); }); } });
 
-<div id="mobile" class="overlay hidden">
-  <div class="card" id="mobileBox">
-    <div class="big">🖥️</div>
-    <h1>这个游戏只能在电脑上玩</h1>
-    <p>「玩家对战足球」需要两个人在同一台电脑上各用一半键盘对战，<br>手机 / 平板没有键盘，无法游玩。<br><br>请用电脑打开本页面，或回到主页选择其他游戏。</p>
-    <div class="actions" style="justify-content:center">
-      <button id="backHome" type="button" style="background:#2f7bf6;border-color:#2f7bf6;color:#fff">返回主页</button>
-    </div>
-  </div>
-</div>
-
-<script>
 /* ============ 基础参数 ============ */
 var FIELD = { left: -212, right: 211.5, top: 140, bottom: -139.5 };
 var GOAL_HALF = 50;          /* 球门开口的半高 */
@@ -204,6 +113,9 @@ window.addEventListener('resize', resize);
 resize();
 
 /* ============ 游戏状态 ============ */
+var stuckTimer = 0;        /* 卡球计时 */
+var STUCK_RADIUS = 26, STUCK_TIME = 1.3, WALL_SLIDE = 90;   /* 死球判定：1.4 秒内位移 < 22 单位 */
+var stuckRef = { x: 0, y: 0 };
 var state = 'intro';       /* intro | playing | goal | over */
 var keys = Object.create(null);
 var score = { p1: 0, p2: 0 };
@@ -289,8 +201,37 @@ function collideBall(p) {
     ball.vx -= (1 + 0.92) * vn * nx;
     ball.vy -= (1 + 0.92) * vn * ny;
   }
-  ball.vx += nx * KICK_PUSH * 0.06 + p.vx * 0.35;
-  ball.vy += ny * KICK_PUSH * 0.06 + p.vy * 0.35;
+  var _j = (Math.random() - 0.5) * 0.42, _cj = Math.cos(_j), _sj = Math.sin(_j), _kr = 0.85 + Math.random() * 0.35, _nx = nx * _cj - ny * _sj, _ny = nx * _sj + ny * _cj; ball.vx += _nx * KICK_PUSH * 0.06 * _kr + p.vx * 0.35;
+  ball.vy += _ny * KICK_PUSH * 0.06 * _kr + p.vy * 0.35;
+  /* 防卡墙：把「往墙里顶」的冲量转成沿墙滑动，并让球从角落往场内走，避免被顶死在墙角 */
+  var _inGoalBand = Math.abs(ball.y) <= GOAL_HALF;
+  var _hitTop = ball.y + ball.r > FIELD.top - 2;
+  var _hitBottom = ball.y - ball.r < FIELD.bottom + 2;
+  var _hitRight = !_inGoalBand && ball.x + ball.r > FIELD.right - 2;
+  var _hitLeft = !_inGoalBand && ball.x - ball.r < FIELD.left + 2;
+  if (_hitTop || _hitBottom) {
+    if (_hitTop && ball.vy > 0) { ball.vy = 0; }
+    if (_hitBottom && ball.vy < 0) { ball.vy = 0; }
+    if (Math.abs(ball.vx) < 95) { ball.vx += (ball.x >= 0 ? -1 : 1) * WALL_SLIDE; }
+  }
+  if (_hitRight || _hitLeft) {
+    if (_hitRight && ball.vx > 0) { ball.vx = 0; }
+    if (_hitLeft && ball.vx < 0) { ball.vx = 0; }
+    if (Math.abs(ball.vy) < 95) { ball.vy += (ball.y >= 0 ? -1 : 1) * WALL_SLIDE; }
+  }
+  /* 死角：两个方向同时贴墙（真正卡在角落）时，直接给一记往场内的推力把球弹出来 */
+  if ((_hitTop || _hitBottom) && (_hitRight || _hitLeft)) {
+    var _cx = ball.x >= 0 ? -1 : 1, _cy = ball.y >= 0 ? -1 : 1;
+    if (Math.abs(ball.vx) < 120) { ball.vx += _cx * 70; }
+    if (Math.abs(ball.vy) < 120) { ball.vy += _cy * 70; }
+  }
+  /* 碰撞后把球重新压回场内：身体冲撞会把球顶进墙里，压回去才不会「卡在墙内」 */
+  if (ball.y + ball.r > FIELD.top) { ball.y = FIELD.top - ball.r; if (ball.vy > 0) { ball.vy = 0; } }
+  if (ball.y - ball.r < FIELD.bottom) { ball.y = FIELD.bottom + ball.r; if (ball.vy < 0) { ball.vy = 0; } }
+  if (Math.abs(ball.y) > GOAL_HALF) {
+    if (ball.x + ball.r > FIELD.right) { ball.x = FIELD.right - ball.r; if (ball.vx > 0) { ball.vx = 0; } }
+    if (ball.x - ball.r < FIELD.left) { ball.x = FIELD.left + ball.r; if (ball.vx < 0) { ball.vx = 0; } }
+  }
 }
 
 function stepBall(dt) {
@@ -331,6 +272,26 @@ function update(dt) {
   stepBall(dt);
   collideBall(p1);
   collideBall(p2);
+  /* ---- 卡球检测：球真的贴在场边线或角落（含边线中段），且一直在原地不动 → 争球 ---- */
+  var _edgeGoalBand = Math.abs(ball.y) <= GOAL_HALF;
+  var _atEdge = (ball.y + ball.r > FIELD.top - 4) || (ball.y - ball.r < FIELD.bottom + 4) ||
+    (!_edgeGoalBand && (ball.x + ball.r > FIELD.right - 4 || ball.x - ball.r < FIELD.left + 4));
+  if (!_atEdge) {
+    stuckTimer = 0; stuckRef.x = ball.x; stuckRef.y = ball.y;
+  } else if (len(ball.x - stuckRef.x, ball.y - stuckRef.y) > STUCK_RADIUS) {
+    stuckRef.x = ball.x; stuckRef.y = ball.y;
+    stuckTimer = 0;
+  } else {
+    stuckTimer += dt;
+    if (stuckTimer > STUCK_TIME) {
+      stuckTimer = 0;
+      stuckRef.x = 0; stuckRef.y = 0;
+      ball.x = 0; ball.y = 0; ball.vx = 0; ball.vy = 0;
+      p1.x = -110; p1.y = 0; p1.vx = 0; p1.vy = 0;
+      p2.x = 110; p2.y = 0; p2.vx = 0; p2.vy = 0;
+      showMsg('争球！', 1000);
+    }
+  }
 
   var inGoalBand = Math.abs(ball.y) <= GOAL_HALF;
   if (inGoalBand && ball.x - ball.r < FIELD.left - 6) { onGoal('p2'); }
@@ -353,23 +314,59 @@ function onGoal(who) {
 }
 
 /* ============ 绘制 ============ */
+/* 夜间球场：左侧蓝色主队半场 / 右侧红色客队半场，中圈灯光 */
+function drawNightPitch(w, h) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.setTransform(UNIT, 0, 0, -UNIT, w / 2, h / 2);
+  var pad = 24;
+  var L = FIELD.left - pad, R = FIELD.right + pad;
+  var B = FIELD.bottom - pad, T = FIELD.top + pad;
+  var fh = T - B;
+  var g1 = ctx.createLinearGradient(L, 0, 0, 0);
+  g1.addColorStop(0, '#0e2b45'); g1.addColorStop(1, '#1a4a6b');
+  ctx.fillStyle = g1; ctx.fillRect(L, B, (R - L) / 2, fh);
+  var g2 = ctx.createLinearGradient(0, 0, R, 0);
+  g2.addColorStop(0, '#4a1d25'); g2.addColorStop(1, '#7a3038');
+  ctx.fillStyle = g2; ctx.fillRect(0, B, (R - L) / 2, fh);
+  for (var i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.07)';
+    ctx.fillRect(L + i * ((R - L) / 10), B, (R - L) / 10, fh);
+  }
+  var glow = ctx.createLinearGradient(-40, 0, 40, 0);
+  glow.addColorStop(0, 'rgba(160,220,255,0)');
+  glow.addColorStop(0.5, 'rgba(200,240,255,0.28)');
+  glow.addColorStop(1, 'rgba(160,220,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(-40, B, 80, fh);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(226,240,255,0.55)';
+  ctx.strokeRect(FIELD.left, FIELD.bottom, FIELD.right - FIELD.left, FIELD.top - FIELD.bottom);
+  ctx.beginPath(); ctx.moveTo(0, FIELD.bottom); ctx.lineTo(0, FIELD.top); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 46, 0, 6.2832); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 4, 0, 6.2832);
+  ctx.fillStyle = 'rgba(226,240,255,0.6)'; ctx.fill();
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = 'rgba(110,205,255,0.95)';
+  ctx.beginPath(); ctx.moveTo(FIELD.left, -GOAL_HALF); ctx.lineTo(FIELD.left, GOAL_HALF); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,130,130,0.95)';
+  ctx.beginPath(); ctx.moveTo(FIELD.right, -GOAL_HALF); ctx.lineTo(FIELD.right, GOAL_HALF); ctx.stroke();
+  ctx.fillStyle = 'rgba(110,205,255,0.14)';
+  ctx.fillRect(FIELD.left - 22, -GOAL_HALF, 22, GOAL_HALF * 2);
+  ctx.fillStyle = 'rgba(255,130,130,0.14)';
+  ctx.fillRect(FIELD.right, -GOAL_HALF, 22, GOAL_HALF * 2);
+}
+function disc(x, y, r, fill, ring) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (ring) { ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.stroke(); }
+}
 function draw() {
   var w = cv.width, h = cv.height;
-  if (fieldImg.complete && fieldImg.naturalWidth) {
-    ctx.drawImage(fieldImg, 0, 0, w, h);
-  } else {
-    ctx.fillStyle = '#1f5b2a'; ctx.fillRect(0, 0, w, h);
-  }
+  drawNightPitch(w, h);
   ctx.save();
   ctx.setTransform(UNIT, 0, 0, -UNIT, w / 2, h / 2);   /* Y 轴向上，和游戏坐标一致（W 向上） */
-
-  function disc(x, y, r, fill, ring) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    if (ring) { ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.stroke(); }
-  }
 
   /* 球 */
   disc(ball.x, ball.y, ball.r, '#ffffff', '#1b2430');
@@ -390,43 +387,21 @@ var last = 0, acc = 0, FIXED = 1 / 120, lastAt = 0;
 function tick(ts) {
   var now = (typeof ts === 'number' && ts > 0) ? ts : ((window.performance && performance.now) ? performance.now() : Date.now());
   if (!last) { last = now; }
-  if (now < last) { now = last; }          /* 时间倒退保护（rAF 与定时器时间基准可能不一致） */
+  if (now < last) { now = last; }
   var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
   last = now;
   lastAt = now;
-  acc = Math.min(acc + dt, 0.1);           /* 累积上限，避免一次性补跑太多 */
+  acc = Math.min(acc + dt, 0.1);
   var guard = 0;
   while (acc >= FIXED && guard++ < 12) { update(FIXED); acc -= FIXED; }
   if (acc < 0) { acc = 0; }
   draw();
 }
-function loop(ts) { tick(ts); /* ============ 全屏切换 ============ */
-var fsBtn = document.getElementById('fsBtn');
-var fsText = document.getElementById('fsText');
-function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-function toggleFullscreen() {
-  var el = document.documentElement;
-  if (!isFull()) {
-    var req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) { req.call(el).catch(function () {}); }
-  } else {
-    var exit = document.exitFullscreen || document.webkitExitFullscreen;
-    if (exit) { exit.call(document).catch(function () {}); }
-  }
+function loop(ts) {
+  tick(ts);
+  requestAnimationFrame(loop);
 }
-function syncFsLabel() {
-  var on = isFull();
-  if (fsText) { fsText.textContent = on ? '退出全屏' : '全屏'; }
-  if (fsBtn) { fsBtn.title = on ? '退出全屏（F）' : '全屏（F）'; }
-}
-if (fsBtn) { fsBtn.addEventListener('click', toggleFullscreen); }
-document.addEventListener('fullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
-document.addEventListener('webkitfullscreenchange', function () { syncFsLabel(); setTimeout(resize, 60); });
-window.addEventListener('keydown', function (e) {
-  if ((e.key || '').toLowerCase() === 'f') { toggleFullscreen(); e.preventDefault(); }
-});
-syncFsLabel();
-requestAnimationFrame(loop); }
+
 /* ============ 全屏切换 ============ */
 var fsBtn = document.getElementById('fsBtn');
 var fsText = document.getElementById('fsText');
@@ -460,7 +435,6 @@ setInterval(function () {
   if (now - lastAt < 100) { return; }
   tick(now);
 }, 50);
-
 /* ============ 界面 ============ */
 var intro = document.getElementById('intro');
 var mobile = document.getElementById('mobile');
