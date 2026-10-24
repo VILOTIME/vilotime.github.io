@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>叶初打飞机</title>
+<title>星海突击</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -73,7 +73,7 @@
     <div id="banner"></div>
     <div class="overlay" id="intro">
       <div class="panel">
-        <h1>叶初打飞机</h1>
+        <h1>星海突击</h1>
         <p>拖动 / 移动鼠标控制战机，按住鼠标或 <b>Q</b> 连续射击</p>
         <p>击落敌机得分，撞到敌机会损失生命</p>
         <button class="btn" id="startBtn" type="button">开始游戏</button>
@@ -225,8 +225,8 @@ function update(dt) {
   /* 射击 */
   fireCooldown -= dt;
   if (firing && fireCooldown <= 0) {
-    bullets.push({ x: player.x, y: player.y + 12, vy: 430, r: 3.2 });
-    fireCooldown = 0.055;
+    bullets.push({ x: player.x, y: player.y + 12, vy: 780, r: 3.2 });
+    fireCooldown = 0.048;
   }
 
   /* 子弹 */

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>双人足球</title>
+<title>桌上足球 · 人机</title>
 <link rel="stylesheet" href="yc-ui.css">
 <style>
   #msg { position: absolute; left: 0; right: 0; top: 46%; transform: translateY(-50%);
@@ -30,7 +30,7 @@
     </div>
     <div class="overlay" id="intro">
       <div class="panel">
-        <h1>双人足球</h1>
+        <h1>桌上足球 · 人机</h1>
         <p>用身体把球撞进对方球门，先进 5 球获胜</p>
         <p>移动：<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>　冲刺：按住 <kbd>Shift</kbd></p>
         <p>触屏：拖动屏幕控制移动</p>
@@ -329,11 +329,14 @@ function update(dt) {
   stepBall(dt);
   collideBall(you);
   collideBall(ai);
-  /* ---- 卡球检测：球真的贴在场边线或角落（含边线中段），且一直在原地不动 → 争球 ---- */
+  /* ---- 卡球检测：球贴在场边线或角落、正被球员顶着、且一直不动 → 争球 ---- */
   var _edgeGoalBand = Math.abs(ball.y) <= GOAL_HALF;
   var _atEdge = (ball.y + ball.r > FIELD.top - 4) || (ball.y - ball.r < FIELD.bottom + 4) ||
     (!_edgeGoalBand && (ball.x + ball.r > FIELD.right - 4 || ball.x - ball.r < FIELD.left + 4));
-  if (!_atEdge) {
+  var _touchA = len(ball.x - you.x, ball.y - you.y) <= you.r + ball.r + 4;
+  var _touchB = len(ball.x - ai.x, ball.y - ai.y) <= ai.r + ball.r + 4;
+  var _touching = _touchA || _touchB;   /* 必须有一方正在顶着球，才算“卡住” */
+  if (!_atEdge || !_touching) {
     stuckTimer = 0; stuckRef.x = ball.x; stuckRef.y = ball.y;
   } else if (len(ball.x - stuckRef.x, ball.y - stuckRef.y) > STUCK_RADIUS) {
     stuckRef.x = ball.x; stuckRef.y = ball.y;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>叶初小游戏PC版</title>
+<title>叶初小游戏</title>
 <script>
   /* 提前决定主题，避免首屏闪白/闪黑 */
   (function () {
@@ -14,12 +14,11 @@
   })();
 </script>
 <style>
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
   :root {
     color-scheme: light;
     --bg: #eef2f7;
+    --bg2: #ffffff;
     --glow: rgba(79, 156, 249, 0.16);
     --header-from: #2b3a4b;
     --header-to: #3f5a78;
@@ -27,15 +26,15 @@
     --accent: #4f9cf9;
     --card-bg: #ffffff;
     --card-border: #e4eaf2;
-    --card-border-hover: #b9d2f2;
     --card-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 10px 22px -14px rgba(16, 24, 40, 0.22);
-    --card-shadow-hover: 0 4px 10px rgba(16, 24, 40, 0.07), 0 16px 28px -14px rgba(37, 99, 235, 0.42);
     --title: #1f2d3d;
+    --muted: #7b8a9c;
     --header-text: #ffffff;
   }
   html[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0f141a;
+    --bg2: #19212c;
     --glow: rgba(90, 166, 255, 0.18);
     --header-from: #171f2a;
     --header-to: #24344a;
@@ -43,167 +42,212 @@
     --accent: #5aa6ff;
     --card-bg: #19212c;
     --card-border: #2a3546;
-    --card-border-hover: #3d5b86;
     --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 10px 22px -14px rgba(0, 0, 0, 0.75);
-    --card-shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.55), 0 16px 28px -14px rgba(90, 166, 255, 0.35);
     --title: #e6edf6;
+    --muted: #8d9db2;
     --header-text: #eaf1fb;
   }
+
+  html, body { height: 100%; }
   body {
-    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
     margin: 0;
-    padding: 0;
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
     background-color: var(--bg);
-    background-image: radial-gradient(circle at 50% 0, var(--glow), rgba(0, 0, 0, 0) 55%);
+    background-image: radial-gradient(circle at 50% -10%, var(--glow), rgba(0, 0, 0, 0) 52%);
     background-repeat: no-repeat;
-    min-height: 100vh;
+    color: var(--title);
     -webkit-text-size-adjust: 100%;
-    transition: background-color 0.3s ease;
+    transition: background-color .3s ease, color .3s ease;
   }
+
+  /* ---------- 顶部 ---------- */
   .header {
     position: relative;
-    background-image: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
-    color: var(--header-text);
-    padding: 24px 16px 20px;
+    padding: 34px 16px 28px;
     text-align: center;
+    color: var(--header-text);
+    background-image: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
     box-shadow: var(--header-shadow);
+    overflow: hidden;
+  }
+  .header::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 22% 0%, rgba(255,255,255,.14), rgba(255,255,255,0) 55%),
+                      radial-gradient(circle at 82% 120%, rgba(255,255,255,.1), rgba(255,255,255,0) 55%);
+    pointer-events: none;
   }
   .header h1 {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: 2px;
-  }
-  /* 标题下方的装饰短线 */
-  .header h1::after {
-    content: "";
-    display: block;
-    width: 46px;
-    height: 3px;
-    margin: 10px auto 0;
-    border-radius: 2px;
-    background-color: var(--accent);
-  }
-  .container {
-    max-width: 1160px;
-    margin: 0 auto;
-    padding: 30px 20px 44px;
-  }
-  /* 所有卡片等宽等高，整行居中，缩放时保持一致 */
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: stretch;
-    gap: 20px;
-  }
-  .game-div {
     position: relative;
-    overflow: hidden;
-    flex: 0 0 300px;
-    height: 160px;
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 4px;
+  }
+  .header .sub {
+    position: relative;
+    margin-top: 12px;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, .68);
+  }
+  .header .sub b { color: var(--accent); font-weight: 700; }
+
+  /* ---------- 容器 ---------- */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 26px 20px 56px;
+  }
+
+  /* ---------- 分组标题 ---------- */
+  .sec {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 30px 0 14px;
+  }
+  .sec:first-child { margin-top: 0; }
+  .sec .ic { font-size: 17px; line-height: 1; }
+  .sec h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--title);
+  }
+  .sec .bar {
+    flex: 1;
+    height: 1px;
+    background-image: linear-gradient(90deg, var(--card-border), rgba(0, 0, 0, 0));
+  }
+  .sec .num {
+    font-size: 11px;
+    letter-spacing: .5px;
+    color: var(--muted);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 3px 9px;
+    background-color: var(--card-bg);
+  }
+
+  /* ---------- 卡片网格 ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 12px;
+    overflow: hidden;
+    border-radius: 16px;
     background-color: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
     box-shadow: var(--card-shadow);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
-    cursor: pointer;
-    text-align: center;
-    user-select: none;
-    -webkit-user-select: none;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .26s cubic-bezier(.2, .8, .3, 1), box-shadow .26s ease, border-color .26s ease;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-  /* 悬停时从顶部展开的强调色短线 */
-  .game-div::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 52px;
-    height: 3px;
-    border-radius: 0 0 3px 3px;
-    background-color: var(--accent);
-    transform: translateX(-50%) scaleX(0);
-    transition: transform 0.3s ease;
+  .card:hover {
+    transform: translateY(-5px);
+    border-color: var(--c1);
+    box-shadow: 0 20px 38px -20px var(--glow-c), 0 2px 6px rgba(0, 0, 0, .08);
   }
-  .game-div:hover {
-    transform: translateY(-4px);
-    border-color: var(--card-border-hover);
-    box-shadow: var(--card-shadow-hover);
+  .card:active { transform: translateY(-1px) scale(.995); }
+
+  .cover {
+    position: relative;
+    height: 96px;
+    display: grid;
+    place-items: center;
+    background-image:
+      radial-gradient(circle at 28% 18%, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 62%),
+      linear-gradient(135deg, var(--c1), var(--c2));
   }
-  .game-div:hover::before {
-    transform: translateX(-50%) scaleX(1);
-  }
-  .game-div:active {
-    transform: translateY(-1px);
-  }
-  .game-icon {
-    font-size: 28px;
+  .cover .emoji {
+    font-size: 38px;
     line-height: 1;
+    filter: drop-shadow(0 5px 12px rgba(0, 0, 0, .3));
+    transition: transform .3s cubic-bezier(.2, .8, .3, 1);
   }
-  .game-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.3;
+  .card:hover .cover .emoji { transform: scale(1.14) rotate(-5deg); }
+  .cover .pc {
+    position: absolute;
+    left: 10px;
+    top: 9px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, .95);
+    background-color: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .38);
+    border-radius: 999px;
+    padding: 2px 8px;
+    backdrop-filter: blur(2px);
+  }
+  .cover .go {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, .9);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .card:hover .cover .go { opacity: 1; transform: translateX(0); }
+
+  .meta { padding: 12px 14px 14px; }
+  .meta h3 {
+    margin: 0 0 5px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .5px;
     color: var(--title);
-    word-break: break-word;
+    line-height: 1.35;
+  }
+  .meta p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
   }
 
-  /* 移动端适配 */
-  @media (max-width: 768px) {
-    .header {
-      padding: 16px 12px 14px;
-    }
-    .header h1 {
-      font-size: 20px;
-      letter-spacing: 1px;
-    }
-    .header h1::after {
-      width: 34px;
-      height: 2px;
-      margin-top: 7px;
-    }
-    .container {
-      padding: 18px 12px 32px;
-    }
-    .row {
-      gap: 12px;
-    }
-    .game-div {
-      flex: 0 0 calc(50% - 6px);
-      height: 104px;
-      gap: 6px;
-      border-radius: 10px;
-    }
-    .game-icon {
-      font-size: 20px;
-    }
-    .game-title {
-      font-size: 14px;
-    }
+  .footer {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--muted);
   }
 
-  /* 触屏设备去掉悬停位移，改用点按反馈 */
+  /* ---------- 手机 ---------- */
+  @media (max-width: 760px) {
+    .header { padding: 24px 12px 20px; }
+    .header h1 { font-size: 22px; letter-spacing: 2px; }
+    .header .sub { font-size: 11.5px; margin-top: 9px; letter-spacing: 1px; }
+    .container { padding: 18px 12px 40px; }
+    .sec { margin: 22px 0 11px; gap: 8px; }
+    .sec h2 { font-size: 13px; letter-spacing: 2px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 11px; }
+    .cover { height: 76px; }
+    .cover .emoji { font-size: 30px; }
+    .meta { padding: 9px 11px 11px; }
+    .meta h3 { font-size: 13.5px; }
+    .meta p { font-size: 11px; }
+    .footer { padding: 0 12px 28px; }
+  }
+
   @media (hover: none) {
-    .game-div:hover {
-      transform: none;
-      border-color: var(--card-border);
-      box-shadow: var(--card-shadow);
-    }
-    .game-div:hover::before {
-      transform: translateX(-50%) scaleX(0);
-    }
-    .game-div:active {
-      transform: scale(0.98);
-    }
+    .card:hover { transform: none; border-color: var(--card-border); box-shadow: var(--card-shadow); }
+    .card:hover .cover .emoji { transform: none; }
+    .card:hover .cover .go { opacity: 0; }
+    .card:active { transform: scale(.98); }
   }
 </style>
 </head>
@@ -211,36 +255,62 @@
 
 <div class="header">
   <h1>叶初小游戏</h1>
+  <div class="sub">共 <b>9</b> 款 · 点击卡片直接开玩 · 手机也能玩</div>
 </div>
 
 <div class="container">
-  <div class="row">
-    <div class="game-div" onclick="location.href='CS平面版.html';">
-      <span class="game-icon" aria-hidden="true">🎯</span>
-      <h3 class="game-title">CS平面版</h3>
-    </div>
-    <div class="game-div" onclick="location.href='叶初打飞机.html';">
-      <span class="game-icon" aria-hidden="true">✈️</span>
-      <h3 class="game-title">叶初打飞机</h3>
-    </div>
-    <div class="game-div" onclick="location.href='双人足球.html';">
-      <span class="game-icon" aria-hidden="true">⚽</span>
-      <h3 class="game-title">双人足球</h3>
-    </div>
-    <div class="game-div" onclick="location.href='任意球练习.html';">
-      <span class="game-icon" aria-hidden="true">🥅</span>
-      <h3 class="game-title">任意球练习</h3>
-    </div>
-    <div class="game-div" onclick="location.href='玩家对战足球.html';">
-      <span class="game-icon" aria-hidden="true">🆚</span>
-      <h3 class="game-title">玩家对战足球</h3>
-    </div>
-    <div class="game-div" onclick="location.href='人机对战足球.html';">
-      <span class="game-icon" aria-hidden="true">🤖</span>
-      <h3 class="game-title">人机对战足球</h3>
-    </div>    <!-- 更多游戏div -->
+
+  <div class="sec"><span class="ic">⚽</span><h2>足球</h2><span class="bar"></span><span class="num">5 款</span></div>
+  <div class="grid">
+    <a class="card" href="11人足球.html" style="--c1:#2f9e6a;--c2:#14663f;--glow-c:rgba(47,158,106,.5)">
+      <div class="cover"><span class="emoji">🏟️</span><span class="go">→</span></div>
+      <div class="meta"><h3>绿茵足球</h3><p>11 v 11 全场 · 手机可观战</p></div>
+    </a>
+    <a class="card" href="玩家对战足球.html" style="--c1:#3d7ff0;--c2:#2347a8;--glow-c:rgba(61,127,240,.5)">
+      <div class="cover"><span class="pc">仅电脑</span><span class="emoji">🆚</span><span class="go">→</span></div>
+      <div class="meta"><h3>桌上足球 · 对战</h3><p>同机双人 · 键盘对决</p></div>
+    </a>
+    <a class="card" href="双人足球.html" style="--c1:#14a3b8;--c2:#0d6b7d;--glow-c:rgba(20,163,184,.5)">
+      <div class="cover"><span class="emoji">🤖</span><span class="go">→</span></div>
+      <div class="meta"><h3>桌上足球 · 人机</h3><p>单挑 AI · 卡线抢射</p></div>
+    </a>
+    <a class="card" href="人机对战足球.html" style="--c1:#8b5cf6;--c2:#5b2fb0;--glow-c:rgba(139,92,246,.5)">
+      <div class="cover"><span class="emoji">👀</span><span class="go">→</span></div>
+      <div class="meta"><h3>桌上足球 · 观战</h3><p>AI 对 AI · 自动对攻</p></div>
+    </a>
+    <a class="card" href="任意球练习.html" style="--c1:#f0913f;--c2:#b35b12;--glow-c:rgba(240,145,63,.5)">
+      <div class="cover"><span class="emoji">🥅</span><span class="go">→</span></div>
+      <div class="meta"><h3>任意球大师</h3><p>选角度 · 预判扑救点位</p></div>
+    </a>
   </div>
+
+  <div class="sec"><span class="ic">🎯</span><h2>射击</h2><span class="bar"></span><span class="num">3 款</span></div>
+  <div class="grid">
+    <a class="card" href="CS平面版.html" style="--c1:#4a6fa5;--c2:#22344f;--glow-c:rgba(74,111,165,.5)">
+      <div class="cover"><span class="emoji">🎯</span><span class="go">→</span></div>
+      <div class="meta"><h3>CS 平面战场</h3><p>俯视 1v1 · 20 血对决</p></div>
+    </a>
+    <a class="card" href="CS秘密行动.html" style="--c1:#6b7a3a;--c2:#3a4520;--glow-c:rgba(107,122,58,.5)">
+      <div class="cover"><span class="emoji">🔫</span><span class="go">→</span></div>
+      <div class="meta"><h3>CS 秘密行动</h3><p>一波波清剿 · 战术走位</p></div>
+    </a>
+    <a class="card" href="叶初打飞机.html" style="--c1:#4f6bd8;--c2:#24307a;--glow-c:rgba(79,107,216,.5)">
+      <div class="cover"><span class="emoji">✈️</span><span class="go">→</span></div>
+      <div class="meta"><h3>星海突击</h3><p>竖版弹幕 · 闪避走位</p></div>
+    </a>
+  </div>
+
+  <div class="sec"><span class="ic">🧩</span><h2>休闲</h2><span class="bar"></span><span class="num">1 款</span></div>
+  <div class="grid">
+    <a class="card" href="俄罗斯方块.html" style="--c1:#c04bd8;--c2:#6d2280;--glow-c:rgba(192,75,216,.5)">
+      <div class="cover"><span class="emoji">🧩</span><span class="go">→</span></div>
+      <div class="meta"><h3>方块风暴</h3><p>消行冲分 · 幽灵落点</p></div>
+    </a>
+  </div>
+
 </div>
+
+<div class="footer">叶初小游戏 · 全部用 Canvas 重写</div>
 
 <script>
 /* 主页只负责跟随主题；切换按钮统一放在外壳页面 index.html */

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>方块风暴</title>
+<link rel="stylesheet" href="yc-ui.css">
+<style>
+  #hud { font-size: 13px; }
+  #hud .chip b { font-size: 15px; }
+  #banner { top: 40%; }
+  #wrap { flex-direction: column; gap: 8px; }
+  #hint { position: static; text-align: center; }
+
+  /* 手机触控键（放在棋盘下方，不遮挡方块） */
+  #touch {
+    position: static;
+    display: none; justify-content: center; gap: 8px; z-index: 8;
+    padding: 0 10px; flex-wrap: wrap;
+  }
+  #touch.show { display: flex; }
+  #touch button {
+    width: 52px; height: 46px; border-radius: 12px;
+    font-size: 19px; font-family: inherit; line-height: 1;
+    color: #e9f1fb; background: rgba(16,28,46,.85);
+    border: 1px solid rgba(120,180,255,.28);
+    cursor: pointer; -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+  }
+  #touch button:active { background: #4f9cf9; border-color: #4f9cf9; transform: scale(.95); }
+  #touch button.wide { width: 62px; font-size: 14px; }
+  .overlay .panel { max-width: 94%; }
+  .rec { color: #ffd166; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <div id="hud">
+      <div class="chip">分数 <b id="score">0</b></div>
+      <div class="chip">等级 <b id="level">1</b></div>
+      <div class="chip">行数 <b id="lines">0</b></div>
+      <div class="chip">最高 <b id="best">0</b></div>
+    </div>
+
+    <div id="banner"></div>
+
+    <div class="tools">
+      <button class="tool-btn" id="pauseBtn" type="button" title="暂停（P）">暂停</button>
+      <button class="tool-btn" id="fsBtn" type="button" title="全屏（F）">⛶ 全屏</button>
+    </div>
+
+
+
+    <div class="overlay" id="intro">
+      <div class="panel">
+        <h1>方块风暴</h1>
+        <p>把方块堆满一整行就能消行，消得越多分数越高。</p>
+        <p><kbd>←</kbd><kbd>→</kbd> 左右移动　<kbd>↓</kbd> 加速下落　<kbd>↓</kbd>+<kbd>空格</kbd> 直接落下</p>
+        <p><kbd>↑</kbd>/<kbd>X</kbd> 顺时针转　<kbd>Z</kbd> 逆时针转　<kbd>C</kbd> 暂存　<kbd>P</kbd> 暂停</p>
+        <p>手机：点下面的按钮，或者在棋盘上左右滑动、下滑、点一下旋转。</p>
+        <button class="btn" id="startBtn" type="button">开始游戏</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="over">
+      <div class="panel">
+        <h1 id="overTitle">游戏结束</h1>
+        <p>得分 <b id="finalScore">0</b>　等级 <b id="finalLevel">1</b>　消行 <b id="finalLines">0</b></p>
+        <p id="overComment"></p>
+        <p>最高分 <b class="rec" id="finalBest">0</b></p>
+        <button class="btn" id="retryBtn" type="button">再来一局</button>
+      </div>
+    </div>
+  </div>
+  <div id="hint"></div>
+  <div id="touch">
+    <button type="button" data-act="left">◀</button>
+    <button type="button" data-act="rotL">◌</button>
+    <button type="button" data-act="rotR">◍</button>
+    <button type="button" data-act="down">▼</button>
+    <button type="button" data-act="right">▶</button>
+    <button type="button" data-act="drop" class="wide">落下</button>
+    <button type="button" data-act="hold" class="wide">暂存</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ * 方块风暴
+ * ============================================================ */
+var COLS = 10, ROWS = 20, CELL = 24;
+var BOARD_W = COLS * CELL, BOARD_H = ROWS * CELL;   /* 240 x 480 */
+var W = 448, H = 528;
+var BOARD_LEFT = -W / 2 + 24;                        /* 棋盘左边界 */
+var BOARD_TOP_Y = H / 2 - 24;                        /* 棋盘顶（左上角）的 y */
+
+/* 顺位：I O T S Z J L */
+var PIECES = {
+  I: { color: '#39c7d8', cells: [[0, 0], [1, 0], [2, 0], [3, 0]], size: 4 },
+  O: { color: '#f2c94c', cells: [[0, 0], [1, 0], [0, 1], [1, 1]], size: 2 },
+  T: { color: '#a97bf0', cells: [[0, 0], [1, 0], [2, 0], [1, 1]], size: 3 },
+  S: { color: '#59c98a', cells: [[1, 0], [2, 0], [0, 1], [1, 1]], size: 3 },
+  Z: { color: '#ef7070', cells: [[0, 0], [1, 0], [1, 1], [2, 1]], size: 3 },
+  J: { color: '#5b8ff0', cells: [[0, 0], [0, 1], [1, 1], [2, 1]], size: 3 },
+  L: { color: '#f0913f', cells: [[2, 0], [0, 1], [1, 1], [2, 1]], size: 3 }
+};
+var ORDER = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+
+var cv = document.getElementById('cv');
+var st = document.getElementById('stage');
+var ctx = cv.getContext('2d');
+var UNIT = 2;
+
+function resize() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var touchOn = document.getElementById('touch').classList.contains('show');
+  var extra = touchOn ? 96 : 30;          /* 下方触控条 + 提示文字占的高度 */
+  var s = Math.min((vw - 22) / W, (vh - 22 - extra) / H);
+  s = Math.max(0.36, s);
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * s * dpr);
+  cv.height = Math.round(H * s * dpr);
+  cv.style.width = Math.round(W * s) + 'px';
+  cv.style.height = Math.round(H * s) + 'px';
+  st.style.width = cv.style.width;
+  st.style.height = cv.style.height;
+  UNIT = s * dpr;
+}
+
+/* ---------- 状态 ---------- */
+var state = 'intro';            /* intro | playing | paused | over */
+var board = [];                 /* [row][col] = null | {c: color} */
+var cur = null;                 /* { key, cells:[[x,y]...], color, x, y } */
+var nextQueue = [], holdKey = null, holdUsed = false;
+var score = 0, level = 1, lines = 0, combo = 0;
+var best = 0;
+var dropTimer = 0, lockTimer = 0, lockDelay = 0.42;
+var clearAnim = null;           /* { rows:[], t } */
+var flashRows = [];
+var bannerTimer = 0;
+var gravity = 0.8;              /* 秒/格 */
+
+var elScore = document.getElementById('score');
+var elLevel = document.getElementById('level');
+var elLines = document.getElementById('lines');
+var elBest = document.getElementById('best');
+var elBanner = document.getElementById('banner');
+var elHint = document.getElementById('hint');
+
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function rand(n) { return Math.floor(Math.random() * n); }
+
+function banner(text, ms) {
+  elBanner.textContent = text;
+  elBanner.classList.add('show');
+  bannerTimer = (ms || 900) / 1000;
+}
+
+function loadBest() {
+  try { best = parseInt(localStorage.getItem('yc-tetris-best') || '0', 10) || 0; } catch (e) { best = 0; }
+  elBest.textContent = best;
+}
+function saveBest() {
+  if (score > best) {
+    best = score;
+    elBest.textContent = best;
+    try { localStorage.setItem('yc-tetris-best', String(best)); } catch (e) { }
+  }
+}
+
+/* ---------- 方块 ---------- */
+function newPiece(key) {
+  var p = PIECES[key];
+  var cells = p.cells.map(function (c) { return [c[0], c[1]]; });
+  return {
+    key: key, color: p.color, size: p.size, cells: cells,
+    x: Math.floor((COLS - p.size) / 2), y: 0
+  };
+}
+
+function refillQueue() {
+  var bag = ORDER.slice();
+  for (var i = bag.length - 1; i > 0; i--) {
+    var j = rand(i + 1), t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+  }
+  for (var k = 0; k < bag.length; k++) { nextQueue.push(bag[k]); }
+}
+
+function spawn() {
+  if (!nextQueue.length) { refillQueue(); nextQueue.length = Math.max(nextQueue.length, 7); }
+  var key = nextQueue.shift();
+  if (nextQueue.length < 5) { refillQueue(); }
+  cur = newPiece(key);
+  holdUsed = false;
+  dropTimer = 0; lockTimer = 0;
+  if (collides(cur, 0, 0, cur.cells)) { gameOver(); }
+}
+
+function cellsOf(piece, cells) {
+  var out = [];
+  for (var i = 0; i < cells.length; i++) {
+    out.push({ x: piece.x + cells[i][0], y: piece.y + cells[i][1] });
+  }
+  return out;
+}
+
+function collides(piece, dx, dy, cells) {
+  var list = cellsOf({ x: piece.x + dx, y: piece.y + dy }, cells);
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    if (c.x < 0 || c.x >= COLS || c.y >= ROWS) { return true; }
+    if (c.y >= 0 && board[c.y][c.x]) { return true; }
+  }
+  return false;
+}
+
+function rotateCells(cells, size, dir) {
+  var out = [];
+  for (var i = 0; i < cells.length; i++) {
+    var x = cells[i][0], y = cells[i][1];
+    if (dir > 0) { out.push([size - 1 - y, x]); }
+    else { out.push([y, size - 1 - x]); }
+  }
+  return out;
+}
+
+function tryRotate(dir) {
+  if (!cur || state !== 'playing') { return; }
+  if (cur.key === 'O') { return; }
+  var rotated = rotateCells(cur.cells, cur.size, dir);
+  var kicks = [0, -1, 1, -2, 2];
+  for (var i = 0; i < kicks.length; i++) {
+    if (!collides(cur, kicks[i], 0, rotated)) {
+      cur.cells = rotated;
+      cur.x += kicks[i];
+      lockTimer = 0;
+      return;
+    }
+  }
+}
+
+function move(dx) {
+  if (!cur || state !== 'playing') { return; }
+  if (!collides(cur, dx, 0, cur.cells)) { cur.x += dx; lockTimer = 0; }
+}
+
+function softDrop() {
+  if (!cur || state !== 'playing') { return; }
+  if (!collides(cur, 0, 1, cur.cells)) {
+    cur.y += 1;
+    score += 1;
+    dropTimer = 0;
+    hudUpdate();
+  } else { lockTimer = lockDelay; }
+}
+
+function hardDrop() {
+  if (!cur || state !== 'playing') { return; }
+  var d = 0;
+  while (!collides(cur, 0, d + 1, cur.cells)) { d++; }
+  cur.y += d;
+  score += d * 2;
+  hudUpdate();
+  lockPiece();
+}
+
+function holdPiece() {
+  if (!cur || state !== 'playing' || holdUsed) { return; }
+  var key = cur.key;
+  if (holdKey === null) {
+    holdKey = key;
+    spawn();
+  } else {
+    var swap = holdKey;
+    holdKey = key;
+    cur = newPiece(swap);
+    cur.x = Math.floor((COLS - cur.size) / 2);
+    cur.y = 0;
+    if (collides(cur, 0, 0, cur.cells)) { gameOver(); }
+  }
+  holdUsed = true;
+  dropTimer = 0; lockTimer = 0;
+}
+
+function lockPiece() {
+  var list = cellsOf(cur, cur.cells);
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    if (c.y >= 0 && c.y < ROWS && c.x >= 0 && c.x < COLS) {
+      board[c.y][c.x] = { c: cur.color };
+    }
+  }
+  cur = null;
+
+  /* 找出满行 */
+  var full = [];
+  for (var r = 0; r < ROWS; r++) {
+    var ok = true;
+    for (var col = 0; col < COLS; col++) { if (!board[r][col]) { ok = false; break; } }
+    if (ok) { full.push(r); }
+  }
+  if (full.length) {
+    var pts = [0, 100, 300, 500, 800][full.length] * level;
+    if (combo > 0) { pts += 50 * combo * level; }
+    score += pts;
+    lines += full.length;
+    combo += 1;
+    flashRows = full.slice();
+    clearAnim = { rows: full, t: 0.22 };
+    var names = ['', '消 1 行', '消 2 行', '消 3 行', '四行消除！'];
+    banner(names[full.length], 700);
+    /* 升级：每 10 行 */
+    var newLevel = 1 + Math.floor(lines / 10);
+    if (newLevel > level) {
+      level = newLevel;
+      banner('等级 ' + level, 900);
+    }
+    gravity = Math.max(0.1, 0.8 - (level - 1) * 0.07);
+    hudUpdate();
+  } else {
+    combo = 0;
+    spawn();
+  }
+}
+
+function applyClear() {
+  var rows = clearAnim.rows.slice().sort(function (a, b) { return a - b; });
+  for (var i = 0; i < rows.length; i++) {
+    board.splice(rows[i], 1);
+    board.unshift(newRow());
+  }
+  clearAnim = null;
+  flashRows = [];
+  spawn();
+}
+
+function newRow() {
+  var row = [];
+  for (var c = 0; c < COLS; c++) { row.push(null); }
+  return row;
+}
+
+function reset() {
+  board = [];
+  for (var r = 0; r < ROWS; r++) { board.push(newRow()); }
+  score = 0; level = 1; lines = 0; combo = 0;
+  gravity = 0.8;
+  nextQueue = []; refillQueue();
+  holdKey = null; holdUsed = false;
+  clearAnim = null; flashRows = [];
+  cur = null;
+  spawn();
+  hudUpdate();
+}
+
+function hudUpdate() {
+  elScore.textContent = score;
+  elLevel.textContent = level;
+  elLines.textContent = lines;
+}
+
+/* ---------- 开始 / 结束 ---------- */
+function startGame() {
+  state = 'playing';
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  reset();
+  elHint.textContent = '←→ 移动 · ↑ 旋转 · ↓ 下落 · 空格 直接落下 · C 暂存 · P 暂停';
+  banner('开始！', 800);
+}
+
+function gameOver() {
+  state = 'over';
+  saveBest();
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalLevel').textContent = level;
+  document.getElementById('finalLines').textContent = lines;
+  document.getElementById('finalBest').textContent = best;
+  document.getElementById('overComment').textContent =
+    score >= 5000 ? '高手，这分数很能打。' :
+      score >= 2000 ? '不错，再往上冲一冲。' :
+        score >= 600 ? '稳住了，继续练堆叠。' : '先把底层铺平，会好很多。';
+  document.getElementById('over').classList.remove('hidden');
+  elHint.textContent = '';
+  elBanner.classList.remove('show');
+}
+
+function togglePause() {
+  if (state === 'playing') {
+    state = 'paused';
+    banner('已暂停（P 继续）', 999999);
+  } else if (state === 'paused') {
+    state = 'playing';
+    elBanner.classList.remove('show');
+    bannerTimer = 0;
+  }
+}
+
+/* ---------- 更新 ---------- */
+function update(dt) {
+  if (bannerTimer > 0) {
+    bannerTimer -= dt;
+    if (bannerTimer <= 0) { elBanner.classList.remove('show'); }
+  }
+  if (state !== 'playing') { return; }
+
+  if (clearAnim) {
+    clearAnim.t -= dt;
+    if (clearAnim.t <= 0) { applyClear(); }
+    return;
+  }
+  if (!cur) { return; }
+
+  dropTimer += dt;
+  if (dropTimer >= gravity) {
+    dropTimer = 0;
+    if (!collides(cur, 0, 1, cur.cells)) {
+      cur.y += 1;
+    } else {
+      lockTimer += gravity;
+    }
+  }
+
+  /* 落地后可短暂调整 */
+  if (collides(cur, 0, 1, cur.cells)) {
+    lockTimer += dt;
+    if (lockTimer >= lockDelay) { lockPiece(); }
+  } else {
+    lockTimer = 0;
+  }
+}
+
+/* ============================================================
+ * 绘制
+ * ============================================================ */
+function drawText(s, x, y, size, color, bold, align) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, -1);
+  ctx.fillStyle = color;
+  ctx.font = (bold ? 'bold ' : '') + size + 'px "PingFang SC", "Microsoft YaHei", Arial, sans-serif';
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(s, 0, 0);
+  ctx.restore();
+}
+
+function cellX(col) { return BOARD_LEFT + col * CELL + CELL / 2; }
+function cellY(row) { return BOARD_TOP_Y - row * CELL - CELL / 2; }
+
+function drawBlock(cx, cy, size, color, alpha, ghost) {
+  var h = size / 2;
+  if (ghost) {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - h + 1.5, cy - h + 1.5, size - 3, size - 3);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+  var g = ctx.createLinearGradient(cx - h, cy + h, cx + h, cy - h);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = g;
+  var r = Math.max(2, size * 0.14);
+  roundRect(cx - h + 1, cy - h + 1, size - 2, size - 2, r);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawBoardBg() {
+  var g = ctx.createLinearGradient(BOARD_LEFT, BOARD_TOP_Y, BOARD_LEFT + BOARD_W, BOARD_TOP_Y - BOARD_H);
+  g.addColorStop(0, 'rgba(14,22,38,0.95)');
+  g.addColorStop(1, 'rgba(8,13,24,0.95)');
+  ctx.fillStyle = g;
+  roundRect(BOARD_LEFT, BOARD_TOP_Y - BOARD_H, BOARD_W, BOARD_H, 10);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120,180,255,0.22)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  /* 网格 */
+  ctx.strokeStyle = 'rgba(120,180,255,0.07)';
+  ctx.lineWidth = 1;
+  for (var c = 1; c < COLS; c++) {
+    var x = BOARD_LEFT + c * CELL;
+    ctx.beginPath(); ctx.moveTo(x, BOARD_TOP_Y); ctx.lineTo(x, BOARD_TOP_Y - BOARD_H); ctx.stroke();
+  }
+  for (var r = 1; r < ROWS; r++) {
+    var y = BOARD_TOP_Y - r * CELL;
+    ctx.beginPath(); ctx.moveTo(BOARD_LEFT, y); ctx.lineTo(BOARD_LEFT + BOARD_W, y); ctx.stroke();
+  }
+}
+
+function drawStack() {
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var b = board[r][c];
+      if (!b) { continue; }
+      var flashing = flashRows.indexOf(r) >= 0;
+      drawBlock(cellX(c), cellY(r), CELL, b.c, flashing ? 0.85 : 1, false);
+    }
+  }
+}
+
+function drawGhostAndPiece() {
+  if (!cur) { return; }
+  /* 影子 */
+  var d = 0;
+  while (!collides(cur, 0, d + 1, cur.cells)) { d++; }
+  var list = cellsOf({ x: cur.x, y: cur.y + d }, cur.cells);
+  for (var i = 0; i < list.length; i++) {
+    drawBlock(cellX(list[i].x), cellY(list[i].y), CELL, cur.color, 1, true);
+  }
+  /* 当前方块 */
+  var curList = cellsOf(cur, cur.cells);
+  for (var j = 0; j < curList.length; j++) {
+    if (curList[j].y >= 0) {
+      drawBlock(cellX(curList[j].x), cellY(curList[j].y), CELL, cur.color, 1, false);
+    }
+  }
+}
+
+function drawPreview(key, cx, cy, size) {
+  if (!key) { return; }
+  var p = PIECES[key];
+  var minX = 9, maxX = -9, minY = 9, maxY = -9;
+  for (var i = 0; i < p.cells.length; i++) {
+    minX = Math.min(minX, p.cells[i][0]); maxX = Math.max(maxX, p.cells[i][0]);
+    minY = Math.min(minY, p.cells[i][1]); maxY = Math.max(maxY, p.cells[i][1]);
+  }
+  var w = (maxX - minX + 1) * size, h = (maxY - minY + 1) * size;
+  var ox = cx - w / 2, oy = cy + h / 2;
+  for (var k = 0; k < p.cells.length; k++) {
+    var bx = ox + (p.cells[k][0] - minX) * size + size / 2;
+    var by = oy - (p.cells[k][1] - minY) * size - size / 2;
+    drawBlock(bx, by, size, p.color, 1, false);
+  }
+}
+
+function drawSidePanel() {
+  var px = BOARD_LEFT + BOARD_W + 16;
+  var cw = W / 2 - px - 8;                 /* 右侧可用宽度 */
+
+  drawText('NEXT', px + cw / 2, BOARD_TOP_Y - 12, 11, 'rgba(200,220,245,.7)', true);
+  for (var i = 0; i < 3; i++) {
+    var key = nextQueue[i];
+    var cy = BOARD_TOP_Y - 52 - i * 62;
+    ctx.strokeStyle = 'rgba(120,180,255,0.16)';
+    ctx.lineWidth = 1.2;
+    roundRect(px, cy - 26, cw, 52, 8);
+    ctx.stroke();
+    drawPreview(key, px + cw / 2, cy, 14);
+  }
+
+  drawText('HOLD', px + cw / 2, BOARD_TOP_Y - 236, 11, 'rgba(200,220,245,.7)', true);
+  ctx.strokeStyle = 'rgba(120,180,255,0.16)';
+  ctx.lineWidth = 1.2;
+  roundRect(px, BOARD_TOP_Y - 296, cw, 52, 8);
+  ctx.stroke();
+  drawPreview(holdKey, px + cw / 2, BOARD_TOP_Y - 270, 14);
+
+  /* 连击提示 */
+  if (combo > 0) {
+    drawText('COMBO x' + combo, px + cw / 2, BOARD_TOP_Y - 330, 12, '#ffd166', true);
+  }
+}
+
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(UNIT, 0, 0, -UNIT, cv.width / 2, cv.height / 2);
+
+  drawBoardBg();
+  drawStack();
+  if (clearAnim) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (clearAnim.t * 2).toFixed(2) + ')';
+    for (var i = 0; i < clearAnim.rows.length; i++) {
+      ctx.fillRect(BOARD_LEFT, BOARD_TOP_Y - (clearAnim.rows[i] + 1) * CELL, BOARD_W, CELL);
+    }
+  }
+  drawGhostAndPiece();
+  drawSidePanel();
+}
+
+/* ---------- 主循环 ---------- */
+var last = 0, acc = 0, FIXED = 1 / 120, lastAt = 0;
+function tick(ts) {
+  var now = (typeof ts === 'number' && ts > 0) ? ts : ((window.performance && performance.now) ? performance.now() : Date.now());
+  if (!last) { last = now; }
+  if (now < last) { now = last; }
+  var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  last = now;
+  lastAt = now;
+  tickRepeat(dt);                       /* 按住连发用真实时间驱动，逻辑降频也不影响手感 */
+  acc = Math.min(acc + dt, 0.1);
+  var guard = 0;
+  while (acc >= FIXED && guard++ < 12) { update(FIXED); acc -= FIXED; }
+  if (acc < 0) { acc = 0; }
+  draw();
+}
+function loop(ts) { tick(ts); requestAnimationFrame(loop); }
+
+/* ---------- 输入（带按住连发：先等一下，然后高速连发） ---------- */
+var held = { left: false, right: false, down: false };
+var rep = {
+  left: { t: 0, run: false },
+  right: { t: 0, run: false },
+  down: { t: 0, run: false }
+};
+
+function act(a) {
+  if (state === 'intro') { startGame(); return; }
+  if (state === 'over') { startGame(); return; }
+  if (state !== 'playing' && a !== 'pause') { return; }
+  if (a === 'left') { move(-1); }
+  else if (a === 'right') { move(1); }
+  else if (a === 'down') { softDrop(); }
+  else if (a === 'rotR') { tryRotate(1); }
+  else if (a === 'rotL') { tryRotate(-1); }
+  else if (a === 'drop') { hardDrop(); }
+  else if (a === 'hold') { holdPiece(); }
+  else if (a === 'pause') { togglePause(); }
+}
+
+/* 按下：立刻响应一次，并记录按住状态 */
+function press(a) {
+  if (held[a] !== undefined) {
+    held[a] = true;
+    rep[a].t = 0;
+    rep[a].run = false;
+  }
+  act(a);
+}
+function release(a) {
+  if (held[a] !== undefined) {
+    held[a] = false;
+    rep[a].t = 0;
+    rep[a].run = false;
+  }
+}
+
+/* 按住连发：按住 0.16 秒后开始高速连发（每 0.045 秒一格）。
+   用累减而不是清零，低帧率下也不会少走。 */
+function tickRepeat(dt) {
+  if (state !== 'playing') { return; }
+  var keysArr = ['left', 'right', 'down'];
+  for (var i = 0; i < keysArr.length; i++) {
+    var k = keysArr[i];
+    if (!held[k]) { continue; }
+    var delay = (k === 'down') ? 0.05 : 0.16;
+    var rate = (k === 'down') ? 0.035 : 0.045;
+    rep[k].t += dt;
+    if (!rep[k].run) {
+      if (rep[k].t >= delay) { rep[k].run = true; rep[k].t = 0; act(k); }
+      continue;
+    }
+    var guard = 0;
+    while (rep[k].t >= rate && guard++ < 12) {
+      rep[k].t -= rate;
+      act(k);
+    }
+    if (rep[k].t > rate * 3) { rep[k].t = rate * 3; }   /* 防止积压成暴冲 */
+  }
+}
+
+window.addEventListener('keydown', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (e.repeat) { e.preventDefault(); return; }   /* 长按交给 tickRepeat 处理 */
+  if (k === 'arrowleft' || k === 'a') { press('left'); e.preventDefault(); }
+  else if (k === 'arrowright' || k === 'd') { press('right'); e.preventDefault(); }
+  else if (k === 'arrowdown' || k === 's') { press('down'); e.preventDefault(); }
+  else if (k === 'arrowup' || k === 'x' || k === 'w') { act('rotR'); e.preventDefault(); }
+  else if (k === 'z') { act('rotL'); e.preventDefault(); }
+  else if (k === ' ') { act('drop'); e.preventDefault(); }
+  else if (k === 'c' || k === 'shift') { act('hold'); e.preventDefault(); }
+  else if (k === 'p') { act('pause'); e.preventDefault(); }
+  else if (k === 'r') { if (state !== 'intro') { startGame(); } }
+  else if (k === 'f') { toggleFullscreen(); }
+  else if (k === 'enter' && (state === 'intro' || state === 'over')) { startGame(); }
+});
+window.addEventListener('keyup', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === 'arrowleft' || k === 'a') { release('left'); }
+  else if (k === 'arrowright' || k === 'd') { release('right'); }
+  else if (k === 'arrowdown' || k === 's') { release('down'); }
+});
+window.addEventListener('blur', function () {
+  release('left'); release('right'); release('down');
+});
+
+/* 触控按钮：按住也能连发 */
+var touchBar = document.getElementById('touch');
+if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) { touchBar.classList.add('show'); }
+touchBar.addEventListener('pointerdown', function (e) {
+  var b = e.target.closest('button');
+  if (!b) { return; }
+  e.preventDefault();
+  press(b.getAttribute('data-act'));
+});
+function endTouch(e) {
+  var b = e.target.closest('button');
+  if (!b) { return; }
+  release(b.getAttribute('data-act'));
+}
+touchBar.addEventListener('pointerup', endTouch);
+touchBar.addEventListener('pointercancel', endTouch);
+touchBar.addEventListener('pointerleave', endTouch);
+
+
+/* 棋盘手势：左右滑移动、下滑加速、轻点旋转 */
+var touchStart = null;
+cv.addEventListener('pointerdown', function (e) {
+  touchStart = { x: e.clientX, y: e.clientY, t: Date.now(), moved: false };
+});
+cv.addEventListener('pointermove', function (e) {
+  if (!touchStart || state !== 'playing') { return; }
+  var dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+  var cellPx = CELL * UNIT;
+  if (Math.abs(dx) > cellPx * 0.9) {
+    move(dx > 0 ? 1 : -1);
+    touchStart.x = e.clientX;
+    touchStart.moved = true;
+  }
+  if (dy > cellPx * 1.6) {
+    softDrop();
+    touchStart.y = e.clientY;
+    touchStart.moved = true;
+  }
+});
+cv.addEventListener('pointerup', function (e) {
+  if (!touchStart) { return; }
+  var dt = Date.now() - touchStart.t;
+  if (!touchStart.moved && dt < 260) { act('rotR'); }
+  touchStart = null;
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', function () {
+  if (state === 'intro') { startGame(); } else { togglePause(); }
+});
+
+/* ---------- 全屏 ---------- */
+var fsBtn = document.getElementById('fsBtn');
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (!isFull()) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { req.call(el).catch(function () {}); }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { exit.call(document).catch(function () {}); }
+  }
+}
+fsBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', function () { setTimeout(resize, 60); });
+
+/* ---------- 启动 ---------- */
+board = [];
+for (var br = 0; br < ROWS; br++) { board.push(newRow()); }
+refillQueue();
+loadBest();
+hudUpdate();
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
+requestAnimationFrame(loop);
+setInterval(function () {
+  var now = (window.performance && performance.now) ? performance.now() : Date.now();
+  if (now - lastAt < 100) { return; }
+  tick(now);
+}, 50);
+</script>
+</body>
+</html>

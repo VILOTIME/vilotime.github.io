@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>绿茵足球</title>
+<link rel="stylesheet" href="yc-ui.css">
+<style>
+  #hud { font-size: 13px; }
+  .score { display: flex; align-items: center; gap: 8px; }
+  .score b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  #clock { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+  #banner { top: 34%; }
+  #hint { bottom: 10px; }
+  .pick { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+  .mode-card {
+    flex: 1 1 160px; min-width: 150px; text-align: left; cursor: pointer;
+    padding: 12px 14px; border-radius: 12px;
+    background: rgba(20,32,50,.72); border: 1px solid rgba(120,180,255,.22);
+    color: #e9f1fb; font-family: inherit; transition: border-color .18s ease, transform .12s ease;
+  }
+  .mode-card:hover { border-color: #4f9cf9; }
+  .mode-card:active { transform: scale(.98); }
+  .mode-card b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .mode-card span { font-size: 12px; color: #a7bbd8; line-height: 1.6; }
+  .mode-card.off {
+    opacity: .42;
+    cursor: not-allowed;
+    border-color: rgba(120, 180, 255, .12);
+  }
+  .mode-card.off b { color: #93a3b8; }
+  .mode-card.off span { color: #7e8ca0; }
+  .mode-card.off:hover { border-color: rgba(120, 180, 255, .12); transform: none; }
+  .ctl-tag {
+    position: absolute; left: 10px; top: 44px; z-index: 6;
+    font-size: 12px; color: #9fe0ff; letter-spacing: 1px;
+    background: rgba(8,14,24,.55); border: 1px solid rgba(120,180,255,.18);
+    border-radius: 999px; padding: 4px 11px; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <div id="hud">
+      <div class="chip"><div class="score"><span class="dot" style="background:#4f9cf9"></span>蓝队 <b id="sBlue">0</b></div></div>
+      <div class="chip" id="clock">02:30</div>
+      <div class="chip"><div class="score"><span class="dot" style="background:#ff5d5d"></span>红队 <b id="sRed">0</b></div></div>
+    </div>
+
+    <div class="ctl-tag" id="ctlTag">操控：7 号</div>
+    <div id="banner"></div>
+    <div id="hint"></div>
+
+    <div class="tools">
+      <button class="tool-btn" id="fsBtn" type="button" title="全屏（F）">⛶ 全屏</button>
+    </div>
+
+    <div class="overlay" id="intro">
+      <div class="panel">
+        <h1>绿茵足球</h1>
+        <p>标准 11 对 11 的整场对抗，蓝队攻右门，红队攻左门。</p>
+        <p>选择模式开始：</p>
+        <div class="pick">
+          <button class="mode-card" id="playBtn" type="button">
+            <b>⚽ 操控比赛</b>
+            <span>你操控离球最近的队友，AI 会自动切人。<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 跑动，<kbd>空格</kbd> 传球 / 射门。</span>
+          </button>
+          <button class="mode-card" id="watchBtn" type="button">
+            <b>👀 观战模式</b>
+            <span>22 名球员全部交给 AI，你只负责看这场对攻。</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="over">
+      <div class="panel">
+        <h1 id="overTitle">比赛结束</h1>
+        <p><b id="finalScore">0 : 0</b></p>
+        <p id="overComment"></p>
+        <div class="pick">
+          <button class="mode-card" id="againBtn" type="button">
+            <b>🔁 再来一场</b>
+            <span>保持当前模式重开</span>
+          </button>
+          <button class="mode-card" id="backBtn" type="button">
+            <b>↩ 换模式</b>
+            <span>回到模式选择</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ * 绿茵足球 · 11 v 11 俯视整场
+ *   模式一：操控比赛（自动切人）
+ *   模式二：观战（双方全 AI）
+ * ============================================================ */
+
+/* ---------- 尺寸 ---------- */
+var W = 780, H = 480;
+var FX = 340, FY = 205;              /* 场地半宽 / 半高 */
+var GOAL_MOUTH = 56;                 /* 球门半高 */
+var GOAL_DEPTH = 18;
+
+/* ---------- 参数 ---------- */
+var P_R = 9, GK_R = 10;
+var P_MAX = 152, P_ACC = 620, P_DRAG = 2.4;
+var B_R = 6, B_MAX = 540, B_DRAG = 0.55, B_REST = 0.86;
+var KICK = 300;
+var MATCH_TIME = 150;                /* 秒 */
+
+/* ---------- 阵型（左队坐标，进攻 +x） ---------- */
+var FORMATION = [
+  { role: 'gk', x: -0.97, y: 0.00, num: 1 },
+  { role: 'def', x: -0.72, y: 0.62, num: 2 },
+  { role: 'def', x: -0.78, y: 0.22, num: 3 },
+  { role: 'def', x: -0.78, y: -0.22, num: 4 },
+  { role: 'def', x: -0.72, y: -0.62, num: 5 },
+  { role: 'mid', x: -0.42, y: 0.66, num: 6 },
+  { role: 'mid', x: -0.46, y: 0.16, num: 8 },
+  { role: 'mid', x: -0.42, y: -0.66, num: 10 },
+  { role: 'fwd', x: -0.12, y: 0.52, num: 7 },
+  { role: 'fwd', x: 0.02, y: 0.00, num: 9 },
+  { role: 'fwd', x: -0.12, y: -0.52, num: 11 }
+];
+
+/* ---------- 配色 ---------- */
+var C = {
+  grass0: '#1c6b45', grass1: '#145634',
+  line: 'rgba(240,250,245,0.72)',
+  blue: '#4f9cf9', blueDark: '#2b5fa8',
+  red: '#ff5d5d', redDark: '#a83030',
+  ball: '#ffffff'
+};
+
+/* ---------- 画布 ---------- */
+var cv = document.getElementById('cv');
+var st = document.getElementById('stage');
+var ctx = cv.getContext('2d');
+var UNIT = 2;
+
+function resize() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var s = Math.min((vw - 22) / W, (vh - 22) / H);
+  s = Math.max(0.34, s);
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * s * dpr);
+  cv.height = Math.round(H * s * dpr);
+  cv.style.width = Math.round(W * s) + 'px';
+  cv.style.height = Math.round(H * s) + 'px';
+  st.style.width = cv.style.width;
+  st.style.height = cv.style.height;
+  UNIT = s * dpr;
+}
+
+/* ---------- 状态 ---------- */
+var state = 'intro';                 /* intro | playing | goalpause | over */
+var controlMode = false;
+var teams = [];                      /* [blue, red] */
+var ball = { x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
+var score = { blue: 0, red: 0 };
+var clock = MATCH_TIME;
+var goalTimer = 0, bannerTimer = 0, pauseTimer = 0;
+var controlled = null;
+var keys = Object.create(null);
+var kickQueued = 0;
+
+var elBlue = document.getElementById('sBlue');
+var elRed = document.getElementById('sRed');
+var elClock = document.getElementById('clock');
+var elBanner = document.getElementById('banner');
+var elHint = document.getElementById('hint');
+var elCtl = document.getElementById('ctlTag');
+
+/* 判断是不是纯触屏设备（手机/平板）：是的话直接拦下 */
+function isTouchOnlyDevice() {
+  try {
+    var tp = navigator.maxTouchPoints || 0;
+    var ua = navigator.userAgent || '';
+    var mobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua);
+    if (window.matchMedia) {
+      var coarse = window.matchMedia('(pointer: coarse)').matches;
+      var noHover = window.matchMedia('(hover: none)').matches;
+      if (coarse && noHover) { return true; }
+      if (mobileUA) { return true; }
+    }
+    return mobileUA || (tp > 0 && window.matchMedia && !window.matchMedia('(any-pointer: fine)').matches);
+  } catch (e) { return false; }
+}
+var touchOnly = isTouchOnlyDevice();
+
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function len(x, y) { return Math.sqrt(x * x + y * y); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function banner(text, ms) {
+  elBanner.textContent = text;
+  elBanner.classList.add('show');
+  bannerTimer = (ms || 1000) / 1000;
+}
+
+function hud() {
+  elBlue.textContent = score.blue;
+  elRed.textContent = score.red;
+  var m = Math.floor(Math.max(0, clock) / 60), s = Math.floor(Math.max(0, clock) % 60);
+  elClock.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+/* ============================================================
+ * 建队
+ * ============================================================ */
+function makeTeam(side) {
+  var attackDir = side === 'blue' ? 1 : -1;
+  var t = {
+    side: side, attackDir: attackDir,
+    color: side === 'blue' ? C.blue : C.red,
+    dark: side === 'blue' ? C.blueDark : C.redDark,
+    players: []
+  };
+  for (var i = 0; i < FORMATION.length; i++) {
+    var f = FORMATION[i];
+    t.players.push({
+      team: t,
+      role: f.role,
+      num: f.num,
+      fx: f.x * attackDir,                 /* 右队镜像 */
+      fy: f.y,
+      x: 0, y: 0, vx: 0, vy: 0,
+      r: f.role === 'gk' ? GK_R : P_R
+    });
+  }
+  return t;
+}
+
+function homePos(p) {
+  return { x: p.fx * (FX - 26), y: p.fy * (FY - 26) };
+}
+
+function resetPositions(kickoffSide) {
+  for (var ti = 0; ti < teams.length; ti++) {
+    var t = teams[ti];
+    for (var i = 0; i < t.players.length; i++) {
+      var p = t.players[i];
+      var h = homePos(p);
+      p.x = h.x; p.y = h.y; p.vx = 0; p.vy = 0;
+    }
+  }
+  ball.x = 0; ball.y = 0; ball.vx = 0; ball.vy = 0; ball.spin = 0;
+  /* 开球方把球送给中路 */
+  var side = kickoffSide || 'blue';
+  var dir = side === 'blue' ? 1 : -1;
+  ball.vx = dir * 25;
+  controlled = null;
+  pickControlled();
+}
+
+/* ============================================================
+ * 开局 / 结束
+ * ============================================================ */
+function startMatch(mode) {
+  if (touchOnly && mode === 'play') {
+    banner('没有键盘：手机 / 平板只能观战', 1500);
+    return;
+  }
+  controlMode = (mode === 'play');
+  teams = [makeTeam('blue'), makeTeam('red')];
+  score = { blue: 0, red: 0 };
+  clock = MATCH_TIME;
+  goalTimer = 0; bannerTimer = 0; pauseTimer = 0; kickQueued = 0;
+  keys = Object.create(null);
+  resetPositions('blue');
+  state = 'playing';
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  elHint.textContent = controlMode
+    ? 'WASD 跑动 · 空格 传球/射门 · 自动切换到离球最近的队友'
+    : '观战模式 · 22 名球员全部交给 AI';
+  banner(controlMode ? '开球！' : '观战开始', 1000);
+  hud();
+}
+
+function endMatch() {
+  state = 'over';
+  elHint.textContent = '';
+  elCtl.textContent = '';
+  var b = score.blue, r = score.red;
+  document.getElementById('finalScore').textContent = b + ' : ' + r;
+  var title = '比赛结束';
+  if (b > r) { title = '蓝队获胜！'; }
+  else if (r > b) { title = '红队获胜！'; }
+  else { title = '平局'; }
+  document.getElementById('overTitle').textContent = title;
+  document.getElementById('overComment').textContent =
+    controlMode ? (b > r ? '你的球队压着对方打，节奏不错。' : b === r ? '势均力敌，再来一场分个高下。' : '对手更稳，注意早点出球。')
+      : 'AI 们献上了一场对攻。';
+  document.getElementById('over').classList.remove('hidden');
+  elBanner.classList.remove('show');
+}
+
+/* ============================================================
+ * 玩家切换
+ * ============================================================ */
+function pickControlled() {
+  if (!controlMode) { controlled = null; return; }
+  var blue = teams[0];
+  var best = null, bd = 1e9;
+  for (var i = 0; i < blue.players.length; i++) {
+    var p = blue.players[i];
+    if (p.role === 'gk') { continue; }
+    var d = len(p.x - ball.x, p.y - ball.y) - (p === controlled ? 46 : 0);
+    if (d < bd) { bd = d; best = p; }
+  }
+  controlled = best;
+  elCtl.textContent = controlled ? ('操控：' + controlled.num + ' 号') : '';
+}
+
+/* ============================================================
+ * 球与人的物理
+ * ============================================================ */
+function movePlayer(p, dx, dy, dt, power) {
+  var l = len(dx, dy);
+  if (l > 0.0001) {
+    p.vx += dx / l * P_ACC * power * dt;
+    p.vy += dy / l * P_ACC * power * dt;
+  }
+  var d = Math.max(0, 1 - P_DRAG * dt);
+  p.vx *= d; p.vy *= d;
+  var sp = len(p.vx, p.vy);
+  var maxS = P_MAX * (power > 1.2 ? 1.18 : 1);
+  if (sp > maxS) { p.vx = p.vx / sp * maxS; p.vy = p.vy / sp * maxS; }
+  p.x += p.vx * dt;
+  p.y += p.vy * dt;
+  p.x = clamp(p.x, -FX + 6, FX - 6);
+  p.y = clamp(p.y, -FY + 6, FY - 6);
+}
+
+function separate(a, b) {
+  var dx = b.x - a.x, dy = b.y - a.y, d = len(dx, dy), min = a.r + b.r;
+  if (d === 0 || d >= min) { return; }
+  var nx = dx / d, ny = dy / d, ov = (min - d) / 2;
+  a.x -= nx * ov; a.y -= ny * ov;
+  b.x += nx * ov; b.y += ny * ov;
+}
+
+/* 球被踢：给定方向与力度 */
+function kickBall(dirX, dirY, power) {
+  var l = len(dirX, dirY) || 1;
+  ball.vx = dirX / l * power;
+  ball.vy = dirY / l * power;
+}
+
+function stepBall(dt) {
+  var d = Math.max(0, 1 - B_DRAG * dt);
+  ball.vx *= d; ball.vy *= d;
+  var sp = len(ball.vx, ball.vy);
+  if (sp > B_MAX) { ball.vx = ball.vx / sp * B_MAX; ball.vy = ball.vy / sp * B_MAX; }
+  ball.spin += sp * dt * 0.035;
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  /* 上下边线反弹 */
+  if (ball.y + B_R > FY) { ball.y = FY - B_R; ball.vy = -ball.vy * B_REST; }
+  if (ball.y - B_R < -FY) { ball.y = -FY + B_R; ball.vy = -ball.vy * B_REST; }
+
+  var inMouth = Math.abs(ball.y) <= GOAL_MOUTH;
+  if (!inMouth) {
+    if (ball.x + B_R > FX) { ball.x = FX - B_R; ball.vx = -ball.vx * B_REST; }
+    if (ball.x - B_R < -FX) { ball.x = -FX + B_R; ball.vx = -ball.vx * B_REST; }
+  } else {
+    /* 进球判定：整颗球越过门线 */
+    if (ball.x - B_R < -FX - GOAL_DEPTH) { scoreGoal('red'); return; }
+    if (ball.x + B_R > FX + GOAL_DEPTH) { scoreGoal('blue'); return; }
+    if (ball.x < -FX - GOAL_DEPTH * 0.6) { ball.vx *= 0.9; }
+    if (ball.x > FX + GOAL_DEPTH * 0.6) { ball.vx *= 0.9; }
+  }
+}
+
+function scoreGoal(side) {
+  if (state !== 'playing') { return; }
+  if (side === 'blue') { score.blue += 1; banner('蓝队进球！', 1300); }
+  else { score.red += 1; banner('红队进球！', 1300); }
+  hud();
+  state = 'goalpause';
+  pauseTimer = 1.6;
+  ball.vx = 0; ball.vy = 0;
+}
+
+/* ============================================================
+ * 队友 / 传球目标
+ * ============================================================ */
+function distToGoal(p) {
+  return Math.abs(p.team.attackDir * FX - p.x);
+}
+
+/* 射门瞄准点：朝门将的反方向，往角落打 */
+/* 朝球门带球 / 传球：瞄准点必须落在门框范围内，别把球带出界 */
+function kickAtGoal(p, power) {
+  var goalX = p.team.attackDir * FX;
+  var aimY = clamp(p.y, -GOAL_MOUTH * 0.55, GOAL_MOUTH * 0.55);
+  kickBall(goalX - p.x, aimY - p.y, power);
+}
+
+function shotTargetY(shooter) {
+  var opp = shooter.team.side === 'blue' ? teams[1] : teams[0];
+  var gk = opp.players[0];
+  var side = gk.y > 4 ? -1 : 1;
+  return side * rand(GOAL_MOUTH * 0.45, GOAL_MOUTH * 0.82);
+}
+
+function bestPassTarget(p) {
+  var t = p.team, dir = t.attackDir, best = null, bs = -1e9;
+  for (var i = 0; i < t.players.length; i++) {
+    var o = t.players[i];
+    if (o === p || o.role === 'gk') { continue; }
+    var dx = o.x - p.x, dy = o.y - p.y;
+    var d = len(dx, dy);
+    if (d < 30 || d > 340) { continue; }
+    var forward = (o.x - p.x) * dir;               /* 往前传才有价值 */
+    if (forward < -20) { continue; }
+    var score2 = forward * 1.0 - d * 0.45 - Math.abs(o.y - p.y) * 0.15;
+    if (score2 > bs) { bs = score2; best = o; }
+  }
+  return best;
+}
+
+/* ============================================================
+ * 触球处理（AI 与玩家共用）
+ * ============================================================ */
+function touchBall(p, dt, isHuman) {
+  var dx = ball.x - p.x, dy = ball.y - p.y;
+  var d = len(dx, dy), min = p.r + B_R;
+  if (d === 0 || d >= min) { return; }
+
+  var nx = dx / d, ny = dy / d;
+  ball.x = p.x + nx * min;
+  ball.y = p.y + ny * min;
+
+  var relVX = ball.vx - p.vx, relVY = ball.vy - p.vy;
+  var vn = relVX * nx + relVY * ny;
+  if (vn < 0) {
+    ball.vx -= 1.7 * vn * nx;
+    ball.vy -= 1.7 * vn * ny;
+  }
+
+  var t = p.team;
+  var goalX = t.attackDir * FX, goalY = 0;
+  var distG = distToGoal(p);
+
+  if (isHuman) {
+    if (kickQueued > 0) {
+      /* 手动传球 / 射门 */
+      var tm = bestPassTarget(p);
+      if (tm && distG > 180) {
+        var pdx = tm.x - p.x, pdy = tm.y - p.y;
+        kickBall(pdx, pdy, 330);
+        banner('传球', 500);
+      } else {
+        var aimY2 = shotTargetY(p);
+        kickBall(goalX - p.x, aimY2 - p.y, 478);
+        banner('射门！', 600);
+      }
+      kickQueued = 0;
+      return;
+    }
+    /* 带球：让球顺着跑动方向滚 */
+    var mvx = p.vx, mvy = p.vy;
+    if (len(mvx, mvy) > 6) { kickBall(mvx, mvy, Math.max(110, len(mvx, mvy) * 1.25)); }
+    else { kickAtGoal(p, 110); }
+    return;
+  }
+
+  /* ---- AI 触球决策 ---- */
+  var rnd = Math.random();
+  if (distG < 275 && rnd < 0.68) {
+    var aimY = shotTargetY(p);
+    kickBall(goalX - p.x, aimY - p.y, 468);
+  } else if (rnd < 0.78) {
+    var target = bestPassTarget(p);
+    if (target) {
+      kickBall(target.x - p.x, target.y - p.y, 320);
+    } else {
+      kickAtGoal(p, 220);
+    }
+  } else {
+    kickAtGoal(p, 185);
+  }
+}
+
+/* ============================================================
+ * AI
+ * ============================================================ */
+function steerAI(p, dt) {
+  var t = p.team;
+  var dir = t.attackDir;
+  var home = homePos(p);
+  var isChaser = (p.team.chaser === p);
+
+  if (p.role === 'gk') {
+    /* 门将：门线附近跟着球移动，球近了就出击 */
+    var gx = -dir * (FX - 24);          /* 自己的球门：左队守左边，右队守右边 */
+    var ty = clamp(ball.y * 0.55, -GOAL_MOUTH + 12, GOAL_MOUTH - 12);
+    var near = (Math.abs(ball.x + dir * FX) < 135) && (p.team === (ball.x < 0 ? teams[0] : teams[1]));
+    if (near) {
+      var gdx = ball.x - p.x, gdy = ball.y - p.y;
+      movePlayer(p, gdx, gdy, dt, 1.15);
+    } else {
+      movePlayer(p, gx - p.x, ty - p.y, dt, 0.95);
+    }
+    return;
+  }
+
+  var tx, ty;
+  if (isChaser) {
+    /* 追球：从球的后方接近，朝着进攻方向带 */
+    tx = ball.x - dir * 8;
+    ty = ball.y;
+  } else {
+    var pullX = p.role === 'def' ? 0.28 : (p.role === 'mid' ? 0.42 : 0.52);
+    var pullY = 0.42;
+    tx = home.x + (ball.x - home.x) * pullX;
+    ty = home.y + (ball.y - home.y) * pullY;
+
+    /* 防守时稍微回收，进攻时往前压 */
+    var ballSide = ball.x * dir;                 /* 球在我方进攻方向的哪边 */
+    var push = clamp(ballSide / FX, -1, 1);
+    tx += push * (p.role === 'def' ? 46 : p.role === 'mid' ? 70 : 96) * dir * 0.5;
+  }
+
+  tx = clamp(tx, -FX + 14, FX - 14);
+  ty = clamp(ty, -FY + 14, FY - 14);
+
+  var dx = tx - p.x, dy = ty - p.y;
+  var d = len(dx, dy);
+  var power = d > 70 ? 1.15 : (d > 22 ? 0.9 : 0.35);
+  movePlayer(p, dx, dy, dt, power);
+}
+
+function updateTeam(team, dt) {
+  /* 选出最近的追球人（不含门将） */
+  var chaser = null, bd = 1e9;
+  for (var i = 0; i < team.players.length; i++) {
+    var p = team.players[i];
+    if (p.role === 'gk') { continue; }
+    var d = len(p.x - ball.x, p.y - ball.y);
+    if (d < bd) { bd = d; chaser = p; }
+  }
+  team.chaser = chaser;
+
+  for (var k = 0; k < team.players.length; k++) {
+    var pl = team.players[k];
+    if (controlMode && pl === controlled) {
+      /* 玩家操控：WASD 跑动 */
+      var ax = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+      var ay = (keys.w ? 1 : 0) - (keys.s ? 1 : 0);
+      if (ax || ay) { movePlayer(pl, ax, ay, dt, 1.25); }
+      else { movePlayer(pl, 0, 0, dt, 1.0); }
+    } else {
+      steerAI(pl, dt);
+    }
+  }
+}
+
+/* ============================================================
+ * 更新
+ * ============================================================ */
+function update(dt) {
+  if (bannerTimer > 0) {
+    bannerTimer -= dt;
+    if (bannerTimer <= 0) { elBanner.classList.remove('show'); }
+  }
+
+  if (state === 'goalpause') {
+    pauseTimer -= dt;
+    if (pauseTimer <= 0) {
+      var kickoff = score.blue > score.red ? 'red' : 'blue';
+      resetPositions(kickoff);
+      state = 'playing';
+      banner('中圈开球', 900);
+    }
+    return;
+  }
+  if (state !== 'playing') { return; }
+
+  clock -= dt;
+  if (clock <= 0) {
+    clock = 0;
+    hud();
+    endMatch();
+    return;
+  }
+  if (kickQueued > 0) { kickQueued -= dt; }
+
+  pickControlled();
+
+  for (var ti = 0; ti < teams.length; ti++) {
+    updateTeam(teams[ti], dt);
+  }
+
+  /* 身体互相避让 */
+  var all = teams[0].players.concat(teams[1].players);
+  for (var i = 0; i < all.length; i++) {
+    for (var j = i + 1; j < all.length; j++) {
+      separate(all[i], all[j]);
+    }
+  }
+
+  stepBall(dt);
+
+  /* 触球 */
+  for (var m = 0; m < all.length; m++) {
+    touchBall(all[m], dt, controlMode && all[m] === controlled);
+  }
+
+  hud();
+}
+
+/* ============================================================
+ * 绘制
+ * ============================================================ */
+function drawText(s, x, y, size, color, bold) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, -1);                       /* 抵消 y 轴翻转 */
+  ctx.fillStyle = color;
+  ctx.font = (bold ? 'bold ' : '') + size + 'px "PingFang SC", "Microsoft YaHei", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(s, 0, 0);
+  ctx.restore();
+}
+
+function drawPitch() {
+  /* 草坪 */
+  var g = ctx.createLinearGradient(0, -FY, 0, FY);
+  g.addColorStop(0, C.grass0);
+  g.addColorStop(1, C.grass1);
+  ctx.fillStyle = g;
+  ctx.fillRect(-FX - 26, -FY - 22, (FX + 26) * 2, (FY + 22) * 2);
+
+  /* 竖条纹 */
+  for (var i = 0; i < 12; i++) {
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.05)';
+    ctx.fillRect(-FX + i * (FX * 2 / 12), -FY, FX * 2 / 12, FY * 2);
+  }
+
+  /* 场地线 */
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 2.4;
+  ctx.strokeRect(-FX, -FY, FX * 2, FY * 2);
+
+  /* 中线 + 中圈 */
+  ctx.beginPath();
+  ctx.moveTo(0, -FY); ctx.lineTo(0, FY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 56, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = C.line;
+  ctx.fill();
+
+  /* 禁区 / 小禁区 / 罚球点 / 罚球弧 / 角球弧 */
+  var pw = 108, ph = 126, gw = 40, gh = 62;
+  var SPOT = 67;                 /* 罚球点到门线的距离 */
+  var ARC_R = 56;                /* 罚球弧半径（与中圈同比例） */
+
+  ctx.strokeRect(-FX, -ph, pw, ph * 2);
+  ctx.strokeRect(FX - pw, -ph, pw, ph * 2);
+  ctx.strokeRect(-FX, -gh, gw, gh * 2);
+  ctx.strokeRect(FX - gw, -gh, gw, gh * 2);
+
+  /* 罚球点 */
+  ctx.beginPath(); ctx.arc(-FX + SPOT, 0, 2.4, 0, Math.PI * 2);
+  ctx.fillStyle = C.line; ctx.fill();
+  ctx.beginPath(); ctx.arc(FX - SPOT, 0, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* 罚球弧：圆心在罚球点上，只画露在禁区外的那一段 */
+  var dEdge = pw - SPOT;                                  /* 禁区线到罚球点的距离 */
+  var halfA = Math.acos(clamp(dEdge / ARC_R, -1, 1));     /* 圆弧与禁区线的交点角度 */
+  ctx.beginPath();
+  ctx.arc(-FX + SPOT, 0, ARC_R, -halfA, halfA);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(FX - SPOT, 0, ARC_R, Math.PI - halfA, Math.PI + halfA);
+  ctx.stroke();
+
+  /* 角球弧：四个角各一小段 */
+  var cr = 7;
+  ctx.beginPath(); ctx.arc(-FX, -FY, cr, 0, Math.PI / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FX, -FY, cr, Math.PI / 2, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-FX, FY, cr, -Math.PI / 2, 0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FX, FY, cr, Math.PI, Math.PI * 1.5); ctx.stroke();
+
+  /* 球门 */
+  ctx.strokeStyle = 'rgba(245,250,255,0.95)';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(-FX, -GOAL_MOUTH); ctx.lineTo(-FX - GOAL_DEPTH, -GOAL_MOUTH);
+  ctx.lineTo(-FX - GOAL_DEPTH, GOAL_MOUTH); ctx.lineTo(-FX, GOAL_MOUTH);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(FX, -GOAL_MOUTH); ctx.lineTo(FX + GOAL_DEPTH, -GOAL_MOUTH);
+  ctx.lineTo(FX + GOAL_DEPTH, GOAL_MOUTH); ctx.lineTo(FX, GOAL_MOUTH);
+  ctx.stroke();
+
+  /* 球网 */
+  ctx.strokeStyle = 'rgba(220,235,245,0.22)';
+  ctx.lineWidth = 1;
+  for (var gy = -GOAL_MOUTH; gy <= GOAL_MOUTH; gy += 10) {
+    ctx.beginPath(); ctx.moveTo(-FX, gy); ctx.lineTo(-FX - GOAL_DEPTH, gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(FX, gy); ctx.lineTo(FX + GOAL_DEPTH, gy); ctx.stroke();
+  }
+  for (var gx = 0; gx <= GOAL_DEPTH; gx += 9) {
+    ctx.beginPath(); ctx.moveTo(-FX - gx, -GOAL_MOUTH); ctx.lineTo(-FX - gx, GOAL_MOUTH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(FX + gx, -GOAL_MOUTH); ctx.lineTo(FX + gx, GOAL_MOUTH); ctx.stroke();
+  }
+}
+
+function drawPlayers() {
+  for (var ti = 0; ti < teams.length; ti++) {
+    var t = teams[ti];
+    for (var i = 0; i < t.players.length; i++) {
+      var p = t.players[i];
+
+      /* 影子 */
+      ctx.beginPath();
+      ctx.arc(p.x + 1, p.y - 2, p.r * 0.95, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fill();
+
+      /* 玩家操控者高亮 */
+      if (controlMode && p === controlled) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + 7, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,209,102,0.95)';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+      }
+
+      /* 身体 */
+      var g = ctx.createRadialGradient(p.x - 2, p.y + 2, 1, p.x, p.y, p.r);
+      g.addColorStop(0, t.color);
+      g.addColorStop(1, t.dark);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.strokeStyle = p.role === 'gk' ? 'rgba(255,235,150,0.95)' : 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = p.role === 'gk' ? 2.4 : 1.8;
+      ctx.stroke();
+
+      /* 号码 */
+      drawText(String(p.num), p.x, p.y + 0.5, p.r * 1.05, '#ffffff', true);
+    }
+  }
+}
+
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ball.x + 1, ball.y - 2, B_R * 0.95, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fill();
+
+  var g = ctx.createRadialGradient(ball.x - 2, ball.y + 2, 1, ball.x, ball.y, B_R);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, '#b9c6d2');
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, B_R, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(30,45,60,0.65)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(ball.x, ball.y);
+  ctx.rotate(ball.spin);
+  ctx.fillStyle = 'rgba(30,45,60,0.8)';
+  ctx.beginPath(); ctx.arc(0, 0, B_R * 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(UNIT, 0, 0, -UNIT, cv.width / 2, cv.height / 2);
+
+  drawPitch();
+  drawPlayers();
+  drawBall();
+}
+
+/* ============================================================
+ * 主循环
+ * ============================================================ */
+var last = 0, acc = 0, FIXED = 1 / 120, lastAt = 0;
+function tick(ts) {
+  var now = (typeof ts === 'number' && ts > 0) ? ts : ((window.performance && performance.now) ? performance.now() : Date.now());
+  if (!last) { last = now; }
+  if (now < last) { now = last; }
+  var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  last = now;
+  lastAt = now;
+  acc = Math.min(acc + dt, 0.1);
+  var guard = 0;
+  while (acc >= FIXED && guard++ < 12) { update(FIXED); acc -= FIXED; }
+  if (acc < 0) { acc = 0; }
+  draw();
+}
+function loop(ts) { tick(ts); requestAnimationFrame(loop); }
+
+/* ============================================================
+ * 输入
+ * ============================================================ */
+window.addEventListener('keydown', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === 'w' || k === 'a' || k === 's' || k === 'd') { keys[k] = true; e.preventDefault(); }
+  else if (k === 'arrowup') { keys.w = true; e.preventDefault(); }
+  else if (k === 'arrowdown') { keys.s = true; e.preventDefault(); }
+  else if (k === 'arrowleft') { keys.a = true; e.preventDefault(); }
+  else if (k === 'arrowright') { keys.d = true; e.preventDefault(); }
+  else if (k === ' ') { kickQueued = 0.18; e.preventDefault(); }
+  else if (k === 'f') { toggleFullscreen(); }
+});
+window.addEventListener('keyup', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === 'w' || k === 'a' || k === 's' || k === 'd') { keys[k] = false; }
+  else if (k === 'arrowup') { keys.w = false; }
+  else if (k === 'arrowdown') { keys.s = false; }
+  else if (k === 'arrowleft') { keys.a = false; }
+  else if (k === 'arrowright') { keys.d = false; }
+});
+window.addEventListener('blur', function () { keys = Object.create(null); });
+
+cv.addEventListener('pointerdown', function (e) {
+  kickQueued = 0.18;
+  e.preventDefault();
+});
+
+document.getElementById('playBtn').addEventListener('click', function () { startMatch('play'); });
+document.getElementById('watchBtn').addEventListener('click', function () { startMatch('watch'); });
+document.getElementById('againBtn').addEventListener('click', function () { startMatch(controlMode ? 'play' : 'watch'); });
+document.getElementById('backBtn').addEventListener('click', function () {
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+  state = 'intro';
+  elHint.textContent = '';
+  elCtl.textContent = '';
+});
+
+/* ---------- 全屏 ---------- */
+var fsBtn = document.getElementById('fsBtn');
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (!isFull()) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { req.call(el).catch(function () {}); }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { exit.call(document).catch(function () {}); }
+  }
+}
+fsBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', function () { setTimeout(resize, 60); });
+
+/* ---------- 启动 ---------- */
+teams = [makeTeam('blue'), makeTeam('red')];
+resetPositions('blue');
+hud();
+elCtl.textContent = '';
+
+/* 手机 / 平板（没有键盘）：不能操控，但可以观战 */
+if (touchOnly) {
+  var pb = document.getElementById('playBtn');
+  if (pb) {
+    pb.classList.add('off');
+    var sp = pb.querySelector('span');
+    if (sp) { sp.textContent = '需要键盘：当前设备请直接用下面的「观战模式」'; }
+  }
+  var hintEl = document.getElementById('hint');
+  if (hintEl) { hintEl.textContent = '当前设备没有键盘，只能观战'; }
+}
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
+requestAnimationFrame(loop);
+setInterval(function () {
+  var now = (window.performance && performance.now) ? performance.now() : Date.now();
+  if (now - lastAt < 100) { return; }
+  tick(now);
+}, 50);
+</script>
+</body>
+</html>

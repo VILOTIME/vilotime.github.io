@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CS 秘密行动</title>
+<style>
+  /* ============ 战术风格配色 ============ */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 0%, #16201a 0%, #070a08 74%);
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
+    color: #dbe3d8; user-select: none; -webkit-user-select: none;
+  }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; }
+  #stage { position: relative; }
+  canvas {
+    display: block; border-radius: 6px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(190,170,110,.22) inset;
+  }
+
+  /* ---------- 顶部战术条 ---------- */
+  #hud {
+    position: absolute; top: 8px; left: 8px; right: 8px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 8px; pointer-events: none;
+    font-family: "Consolas", "SFMono-Regular", ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .5px;
+  }
+  .tag {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px; border-radius: 3px;
+    background: rgba(10,16,12,.78);
+    border: 1px solid rgba(190,170,110,.28);
+    border-left: 2px solid #d9a441;
+    text-transform: uppercase;
+  }
+  .tag b { color: #f0d68c; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .tag .lbl { color: #8b9683; font-size: 10px; letter-spacing: 1.2px; }
+
+  /* 分段血量 */
+  .segs { display: flex; gap: 2px; }
+  .segs i {
+    width: 9px; height: 12px; background: #2a3324;
+    border: 1px solid rgba(190,170,110,.25); border-radius: 1px;
+    transition: background .15s linear;
+  }
+  .segs i.on { background: linear-gradient(180deg, #9fd28a, #4f8a3e); border-color: rgba(160,220,140,.5); }
+  .segs i.low { background: linear-gradient(180deg, #ff9070, #c8412d); border-color: rgba(255,140,110,.6); }
+
+  #banner {
+    position: absolute; left: 0; right: 0; top: 34%;
+    transform: translateY(-50%);
+    font-family: "Consolas", ui-monospace, monospace;
+    font-size: clamp(14px, 3.6vw, 19px); font-weight: 700; letter-spacing: clamp(2px, .8vw, 5px);
+    color: #f0d68c; text-align: center; white-space: nowrap;
+    text-shadow: 0 0 18px rgba(217,164,65,.55), 0 4px 14px rgba(0,0,0,.9);
+    opacity: 0; transition: opacity .2s ease; pointer-events: none;
+  }
+  #banner.show { opacity: 1; }
+
+  #hint {
+    position: absolute; left: 0; right: 0; bottom: 8px;
+    font-family: "Consolas", ui-monospace, monospace;
+    font-size: clamp(10px, 2.5vw, 11.5px); color: rgba(200,210,195,.65); letter-spacing: 1px;
+    text-align: center; pointer-events: none; white-space: nowrap;
+  }
+
+  .tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 6; }
+  .tool-btn {
+    padding: 5px 10px; border-radius: 3px;
+    font-family: "Consolas", ui-monospace, monospace; font-size: 11px; line-height: 1;
+    color: #dbe3d8; background: rgba(10,16,12,.8);
+    border: 1px solid rgba(190,170,110,.3); cursor: pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  .tool-btn:hover { border-color: #d9a441; color: #f0d68c; }
+  .tool-btn:active { transform: scale(.97); }
+
+  /* ---------- 弹窗 ---------- */
+  .overlay {
+    position: absolute; inset: 0; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; text-align: left;
+    background:
+      repeating-linear-gradient(0deg, rgba(160,190,140,.035) 0 1px, transparent 1px 3px),
+      rgba(6,10,8,.9);
+    z-index: 10; padding: 18px;
+  }
+  .overlay.hidden { display: none; }
+  .panel { padding: 18px 22px; max-width: 94%; }
+  .panel .kicker {
+    font-family: "Consolas", ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 3px; color: #8b9683; text-transform: uppercase;
+  }
+  .panel h1 {
+    margin: 4px 0 12px; font-size: clamp(19px, 4.4vw, 25px); letter-spacing: 3px; color: #f0d68c;
+    font-weight: 800;
+  }
+  .panel p { margin: 5px 0; font-size: clamp(11px, 2.6vw, 13px); line-height: 1.7; color: #b8c3ae; }
+  .panel p b { color: #e6eddc; }
+  .panel kbd {
+    display: inline-block; min-width: 20px; padding: 1px 6px; margin: 0 1px;
+    font-family: "Consolas", ui-monospace, monospace; font-size: 11px; font-weight: 700;
+    background: #1d2519; border: 1px solid #3d4933; border-bottom-width: 2px;
+    border-radius: 3px; color: #dbe3d8;
+  }
+  .btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .btn {
+    padding: 9px 22px; font-family: inherit; font-size: clamp(13px, 3vw, 14px); font-weight: 700;
+    letter-spacing: 2px; color: #10160f; cursor: pointer;
+    background: linear-gradient(180deg, #f0d68c, #d9a441);
+    border: none; border-radius: 3px;
+    box-shadow: 0 6px 18px rgba(217,164,65,.32);
+    transition: transform .12s ease, filter .2s ease;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: scale(.97); }
+  .btn.ghost {
+    background: transparent; border: 1px solid rgba(190,170,110,.4); color: #dbe3d8;
+    box-shadow: none;
+  }
+  .btn.ghost:hover { border-color: #d9a441; color: #f0d68c; }
+
+  @media (max-width: 560px) {
+    #hud { font-size: 11px; top: 6px; left: 6px; right: 6px; }
+    .tag { padding: 4px 8px; gap: 6px; }
+    .tag b { font-size: 12px; }
+    .segs i { width: 7px; height: 10px; }
+    .panel { padding: 12px 14px; }
+    .tools { top: 6px; right: 6px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <div id="hud">
+      <div class="tag">
+        <span class="lbl">HP</span><b id="hpTxt">100</b>
+        <span class="segs" id="segs"></span>
+      </div>
+      <div class="tag">
+        <span class="lbl">波次</span><b id="waveTxt">1</b>
+        <span class="lbl">击杀</span><b id="killTxt">0</b>
+      </div>
+      <div class="tag">
+        <span class="lbl">敌情</span><b id="leftTxt">3</b>
+      </div>
+    </div>
+
+    <div id="banner"></div>
+    <div id="hint"></div>
+
+    <div class="tools">
+      <button class="tool-btn" id="fsBtn" type="button" title="全屏（F）">⛶ 全屏</button>
+    </div>
+
+    <div class="overlay" id="intro">
+      <div class="panel">
+        <div class="kicker">MISSION BRIEFING</div>
+        <h1>CS 秘密行动</h1>
+        <p><b>任务</b>：潜入清剿，一波接一波地干掉敌人，坚持越久军功越高。</p>
+        <p><b>操作</b>：<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动　鼠标瞄准　按住左键 / <kbd>空格</kbd> 开火</p>
+        <p><b>手机</b>：左下角方向盘移动，按住画面瞄准开火。</p>
+        <p><b>情报</b>：箱子能挡子弹也能挡视线，绕后、卡枪线才是老兵的打法。</p>
+        <div class="btnrow"><button class="btn" id="startBtn" type="button">进入战场</button></div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="over">
+      <div class="panel">
+        <div class="kicker">MISSION REPORT</div>
+        <h1 id="overTitle">行动失败</h1>
+        <p>坚持到第 <b id="finalWave">1</b> 波，击毙 <b id="finalKills">0</b> 名敌人</p>
+        <p id="overComment"></p>
+        <div class="btnrow"><button class="btn" id="retryBtn" type="button">再战一次</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ * CS 秘密行动 · 俯视战术射击
+ * ============================================================ */
+
+var W = 560, H = 420;
+var BOUND = { x: W / 2 - 10, y: H / 2 - 10 };
+
+var P_R = 12, P_SPEED = 176, P_HP = 100;
+var P_FIRE = 0.104, P_DMG = 17, P_BS = 640;
+var E_R = 12, E_SPEED = 92, E_HP = 54, E_FIRE = 1.05, E_DMG = 8, E_BS = 410;
+
+/* 掩体 */
+var WALLS = [
+  { x: -150, y: 70, w: 128, h: 24 },
+  { x: 120, y: 104, w: 24, h: 112 },
+  { x: 10, y: -22, w: 148, h: 24 },
+  { x: -112, y: -122, w: 24, h: 100 },
+  { x: 172, y: -124, w: 104, h: 24 },
+  { x: 206, y: 12, w: 24, h: 96 },
+  { x: -34, y: 152, w: 96, h: 24 }
+];
+
+/* 配色 */
+var C = {
+  floor0: '#0f1a14', floor1: '#060a08',
+  grid: 'rgba(120,180,130,0.055)',
+  wallLo: '#1d2a1e', wallHi: '#35452f', wallEdge: 'rgba(170,200,150,0.28)',
+  amber: '#d9a441', amberLt: '#f0d68c',
+  foe: '#ff8a7a', foeDark: '#b8392a',
+  player: '#cfd8c4', helm: '#2f3a26'
+};
+
+var cv = document.getElementById('cv');
+var st = document.getElementById('stage');
+var ctx = cv.getContext('2d');
+var UNIT = 2;
+var shake = 0;
+
+function resize() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var s = Math.min((vw - 26) / W, (vh - 26) / H);
+  s = Math.max(0.42, s);
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * s * dpr);
+  cv.height = Math.round(H * s * dpr);
+  cv.style.width = Math.round(W * s) + 'px';
+  cv.style.height = Math.round(H * s) + 'px';
+  st.style.width = cv.style.width;
+  st.style.height = cv.style.height;
+  UNIT = s * dpr;
+}
+
+var state = 'intro';
+var wave = 1, kills = 0;
+var player, enemies, bullets, particles;
+var aim = { x: 0, y: 120 }, firing = false, recoil = { x: 0, y: 0 };
+var keys = Object.create(null);
+var waveTimer = 0, bannerTimer = 0;
+var hitFlash = 0, muzzle = 0;
+
+var elHp = document.getElementById('hpTxt');
+var elSegs = document.getElementById('segs');
+var elWave = document.getElementById('waveTxt');
+var elKill = document.getElementById('killTxt');
+var elLeft = document.getElementById('leftTxt');
+var elBanner = document.getElementById('banner');
+var elHint = document.getElementById('hint');
+
+/* 血量条：10 段 */
+var SEGS = 10;
+for (var si = 0; si < SEGS; si++) { elSegs.appendChild(document.createElement('i')); }
+
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function len(x, y) { return Math.sqrt(x * x + y * y); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+function banner(text, ms) {
+  elBanner.textContent = text;
+  elBanner.classList.add('show');
+  bannerTimer = (ms || 1000) / 1000;
+}
+
+function hud() {
+  var hp = Math.max(0, Math.round(player ? player.hp : P_HP));
+  elHp.textContent = hp < 10 ? '0' + hp : String(hp);
+  var lit = Math.ceil(hp / P_HP * SEGS);
+  var kids = elSegs.children;
+  for (var i = 0; i < kids.length; i++) {
+    kids[i].className = i < lit ? (hp <= 35 ? 'on low' : 'on') : '';
+  }
+  elWave.textContent = wave;
+  elKill.textContent = kills;
+  elLeft.textContent = enemies ? enemies.length : 0;
+}
+
+/* ---------- 几何 ---------- */
+function segHitsRect(x1, y1, x2, y2, r) {
+  var minx = r.x - r.w / 2, maxx = r.x + r.w / 2;
+  var miny = r.y - r.h / 2, maxy = r.y + r.h / 2;
+  var dx = x2 - x1, dy = y2 - y1;
+  var t0 = 0, t1 = 1;
+  var p = [-dx, dx, -dy, dy];
+  var q = [x1 - minx, maxx - x1, y1 - miny, maxy - y1];
+  for (var i = 0; i < 4; i++) {
+    if (p[i] === 0) { if (q[i] < 0) { return false; } }
+    else {
+      var t = q[i] / p[i];
+      if (p[i] < 0) { if (t > t1) { return false; } if (t > t0) { t0 = t; } }
+      else { if (t < t0) { return false; } if (t < t1) { t1 = t; } }
+    }
+  }
+  return true;
+}
+
+function circleHitsRect(cx, cy, r, rect) {
+  var hx = rect.w / 2, hy = rect.h / 2;
+  var nx = clamp(cx, rect.x - hx, rect.x + hx);
+  var ny = clamp(cy, rect.y - hy, rect.y + hy);
+  var dx = cx - nx, dy = cy - ny;
+  return dx * dx + dy * dy < r * r;
+}
+
+function los(x1, y1, x2, y2) {
+  for (var i = 0; i < WALLS.length; i++) {
+    if (segHitsRect(x1, y1, x2, y2, WALLS[i])) { return false; }
+  }
+  return true;
+}
+
+function resolveWalls(body, r) {
+  for (var i = 0; i < WALLS.length; i++) {
+    var w = WALLS[i];
+    var hx = w.w / 2, hy = w.h / 2;
+    var nx = clamp(body.x, w.x - hx, w.x + hx);
+    var ny = clamp(body.y, w.y - hy, w.y + hy);
+    var dx = body.x - nx, dy = body.y - ny;
+    var d = len(dx, dy);
+    if (d >= r) { continue; }
+    if (d < 0.0001) {
+      var left = Math.abs(body.x - (w.x - hx)), right = Math.abs((w.x + hx) - body.x);
+      var down = Math.abs(body.y - (w.y - hy)), up = Math.abs((w.y + hy) - body.y);
+      var m = Math.min(left, right, down, up);
+      if (m === left) { body.x = w.x - hx - r; }
+      else if (m === right) { body.x = w.x + hx + r; }
+      else if (m === down) { body.y = w.y - hy - r; }
+      else { body.y = w.y + hy + r; }
+    } else {
+      var push = (r - d);
+      body.x += dx / d * push;
+      body.y += dy / d * push;
+    }
+  }
+  body.x = clamp(body.x, -BOUND.x + r, BOUND.x - r);
+  body.y = clamp(body.y, -BOUND.y + r, BOUND.y - r);
+}
+
+function burst(x, y, color, n, speed) {
+  for (var i = 0; i < (n || 10); i++) {
+    var a = Math.random() * Math.PI * 2, sp = (speed || 90) * (0.35 + Math.random());
+    particles.push({
+      x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      life: 0.22 + Math.random() * 0.3, max: 0.52, color: color, size: 1.4 + Math.random() * 2
+    });
+  }
+}
+
+/* ---------- 波次 ---------- */
+function spawnWave() {
+  enemies = [];
+  var count = Math.min(6, 2 + wave);
+  var spots = [
+    { x: -232, y: 158 }, { x: 232, y: 158 }, { x: -232, y: -158 },
+    { x: 232, y: -158 }, { x: 0, y: 176 }, { x: 0, y: -176 }
+  ];
+  for (var i = 0; i < count; i++) {
+    var s = spots[i % spots.length];
+    var off = i >= spots.length ? rand(-26, 26) : 0;
+    enemies.push({
+      x: s.x + off, y: s.y + off * 0.5,
+      hp: E_HP + (wave - 1) * 14, cool: rand(0.4, 1.2), aim: 0,
+      flash: 0, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: rand(0.6, 1.6)
+    });
+  }
+  hud();
+}
+
+function startGame() {
+  wave = 1; kills = 0;
+  bullets = []; particles = [];
+  player = { x: 0, y: -140, hp: P_HP, cool: 0, flash: 0 };
+  aim = { x: 0, y: 60 };
+  recoil = { x: 0, y: 0 };
+  firing = false;
+  shake = 0; hitFlash = 0; muzzle = 0;
+  spawnWave();
+  state = 'playing';
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  elHint.textContent = 'WASD 移动 · 鼠标瞄准 · 按住左键开火';
+  banner('第 1 波 · 行动开始', 1100);
+  hud();
+}
+
+function gameOver() {
+  state = 'over';
+  elHint.textContent = '';
+  document.getElementById('finalWave').textContent = wave;
+  document.getElementById('finalKills').textContent = kills;
+  var comment = kills >= 20 ? '战果出色，可以申请晋升了。' :
+    kills >= 10 ? '表现稳定，继续保持。' :
+      kills >= 4 ? '行动尚可，注意利用掩体。' : '经验不足，先从躲避开始练。';
+  document.getElementById('overTitle').textContent = '行动结束';
+  document.getElementById('overComment').textContent = comment;
+  document.getElementById('over').classList.remove('hidden');
+  elBanner.classList.remove('show');
+}
+
+/* ------------- 更新 ------------- */
+function update(dt) {
+  if (bannerTimer > 0) {
+    bannerTimer -= dt;
+    if (bannerTimer <= 0) { elBanner.classList.remove('show'); }
+  }
+  if (shake > 0) { shake = Math.max(0, shake - dt * 26); }
+  if (muzzle > 0) { muzzle -= dt; }
+  if (hitFlash > 0) { hitFlash -= dt; }
+
+  if (state === 'wavebreak') {
+    waveTimer -= dt;
+    updateParticles(dt);
+    if (waveTimer <= 0) {
+      wave += 1;
+      spawnWave();
+      state = 'playing';
+      banner('第 ' + wave + ' 波', 1000);
+      hud();
+    }
+    return;
+  }
+  if (state !== 'playing') { updateParticles(dt); return; }
+
+  var ax = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+  var ay = (keys.w ? 1 : 0) - (keys.s ? 1 : 0);
+  if (ax || ay) {
+    var l = len(ax, ay);
+    player.x += ax / l * P_SPEED * dt;
+    player.y += ay / l * P_SPEED * dt;
+  }
+  resolveWalls(player, P_R);
+
+  recoil.x *= Math.max(0, 1 - dt * 9);
+  recoil.y *= Math.max(0, 1 - dt * 9);
+
+  player.cool -= dt;
+  if (firing && player.cool <= 0) {
+    player.cool = P_FIRE;
+    var tx = aim.x + recoil.x, ty = aim.y + recoil.y;
+    var dx = tx - player.x, dy = ty - player.y;
+    var ang = Math.atan2(dy, dx) + rand(-0.012, 0.012);
+    bullets.push({
+      x: player.x + Math.cos(ang) * (P_R + 4),
+      y: player.y + Math.sin(ang) * (P_R + 4),
+      vx: Math.cos(ang) * P_BS, vy: Math.sin(ang) * P_BS,
+      dmg: P_DMG, owner: 'p', life: 1.6
+    });
+    recoil.x += rand(-3.4, 3.4);
+    recoil.y += rand(-3.4, 3.4);
+    muzzle = 0.05;
+    shake = Math.min(3.2, shake + 0.7);
+    burst(player.x + Math.cos(ang) * (P_R + 6), player.y + Math.sin(ang) * (P_R + 6), 'rgba(255,215,140,0.95)', 3, 130);
+  }
+
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (e.flash > 0) { e.flash -= dt; }
+    var dx2 = player.x - e.x, dy2 = player.y - e.y;
+    var d2 = len(dx2, dy2) || 1;
+    var canSee = los(e.x, e.y, player.x, player.y);
+    e.aim = Math.atan2(dy2, dx2);
+
+    var want = canSee ? 200 : 90;
+    var sx = 0, sy = 0;
+    if (d2 > want + 40) { sx = dx2 / d2; sy = dy2 / d2; }
+    else if (d2 < want - 60) { sx = -dx2 / d2; sy = -dy2 / d2; }
+    else {
+      e.strafeT -= dt;
+      if (e.strafeT <= 0) { e.strafe = -e.strafe; e.strafeT = rand(0.7, 1.8); }
+      sx = -dy2 / d2 * e.strafe;
+      sy = dx2 / d2 * e.strafe;
+    }
+    var sp = E_SPEED + wave * 5;
+    var oldX = e.x, oldY = e.y;
+    e.x += sx * sp * dt;
+    e.y += sy * sp * dt;
+    resolveWalls(e, E_R);
+    if (len(e.x - oldX, e.y - oldY) < 0.4 && (sx || sy)) {
+      e.x += -sy * sp * dt;
+      e.y += sx * sp * dt;
+      resolveWalls(e, E_R);
+    }
+
+    e.cool -= dt;
+    if (canSee && d2 < 330 && e.cool <= 0) {
+      e.cool = Math.max(0.42, E_FIRE - wave * 0.06) * rand(0.85, 1.2);
+      var ea = e.aim + rand(-0.085, 0.085);
+      bullets.push({
+        x: e.x + Math.cos(ea) * (E_R + 4),
+        y: e.y + Math.sin(ea) * (E_R + 4),
+        vx: Math.cos(ea) * E_BS, vy: Math.sin(ea) * E_BS,
+        dmg: E_DMG, owner: 'e', life: 1.8
+      });
+      burst(e.x + Math.cos(ea) * (E_R + 5), e.y + Math.sin(ea) * (E_R + 5), 'rgba(255,150,120,0.9)', 2, 100);
+    }
+  }
+
+  for (var b = bullets.length - 1; b >= 0; b--) {
+    var bl = bullets[b];
+    bl.life -= dt;
+    if (bl.life <= 0) { bullets.splice(b, 1); continue; }
+
+    var stepLen = len(bl.vx, bl.vy) * dt;
+    var steps = Math.max(1, Math.ceil(stepLen / 6));
+    var hit = false;
+    for (var s = 0; s < steps && !hit; s++) {
+      bl.x += bl.vx * dt / steps;
+      bl.y += bl.vy * dt / steps;
+
+      for (var w = 0; w < WALLS.length; w++) {
+        if (circleHitsRect(bl.x, bl.y, 2.5, WALLS[w])) {
+          burst(bl.x, bl.y, bl.owner === 'p' ? 'rgba(255,220,160,.9)' : 'rgba(255,160,140,.9)', 4, 90);
+          hit = true;
+          break;
+        }
+      }
+      if (hit) { break; }
+      if (bl.x < -BOUND.x || bl.x > BOUND.x || bl.y < -BOUND.y || bl.y > BOUND.y) {
+        hit = true; break;
+      }
+
+      if (bl.owner === 'e') {
+        if (len(bl.x - player.x, bl.y - player.y) < P_R + 2) {
+          player.hp -= bl.dmg;
+          player.flash = 0.16;
+          hitFlash = 0.22;
+          shake = Math.min(6, shake + 2.4);
+          burst(bl.x, bl.y, 'rgba(255,110,110,.95)', 6, 120);
+          hit = true;
+          hud();
+          if (player.hp <= 0) { player.hp = 0; hud(); gameOver(); }
+          break;
+        }
+      } else {
+        for (var k = 0; k < enemies.length; k++) {
+          var en = enemies[k];
+          if (len(bl.x - en.x, bl.y - en.y) < E_R + 2) {
+            en.hp -= bl.dmg;
+            en.flash = 0.14;
+            burst(bl.x, bl.y, 'rgba(255,190,120,.95)', 5, 130);
+            if (en.hp <= 0) {
+              burst(en.x, en.y, 'rgba(255,120,120,.95)', 16, 180);
+              enemies.splice(k, 1);
+              kills += 1;
+              hud();
+            }
+            hit = true;
+            break;
+          }
+        }
+      }
+    }
+    if (hit) { bullets.splice(b, 1); }
+  }
+
+  if (enemies.length === 0 && state === 'playing') {
+    state = 'wavebreak';
+    waveTimer = 1.5;
+    banner('区域清空 · 准备下一波', 1400);
+    bullets = [];
+    hud();
+  }
+
+  if (player.flash > 0) { player.flash -= dt; }
+  updateParticles(dt);
+}
+
+function updateParticles(dt) {
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= (1 - dt * 3.4); p.vy *= (1 - dt * 3.4);
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); }
+  }
+}
+
+/* ------------- 绘制 ------------- */
+function drawFloor() {
+  var g = ctx.createRadialGradient(0, 0, 40, 0, 0, W * 0.72);
+  g.addColorStop(0, C.floor0);
+  g.addColorStop(1, C.floor1);
+  ctx.fillStyle = g;
+  ctx.fillRect(-W / 2, -H / 2, W, H);
+
+  ctx.strokeStyle = C.grid;
+  ctx.lineWidth = 1;
+  for (var x = -W / 2; x <= W / 2; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, -H / 2); ctx.lineTo(x, H / 2); ctx.stroke();
+  }
+  for (var y = -H / 2; y <= H / 2; y += 40) {
+    ctx.beginPath(); ctx.moveTo(-W / 2, y); ctx.lineTo(W / 2, y); ctx.stroke();
+  }
+
+  /* 战术角标 */
+  ctx.strokeStyle = 'rgba(190,170,110,0.22)';
+  ctx.lineWidth = 2;
+  var m = 8, L = 26;
+  [[-W / 2 + m, -H / 2 + m, 1, 1], [W / 2 - m, -H / 2 + m, -1, 1],
+  [-W / 2 + m, H / 2 - m, 1, -1], [W / 2 - m, H / 2 - m, -1, -1]].forEach(function (c) {
+    ctx.beginPath();
+    ctx.moveTo(c[0], c[1] + c[3] * L);
+    ctx.lineTo(c[0], c[1]);
+    ctx.lineTo(c[0] + c[2] * L, c[1]);
+    ctx.stroke();
+  });
+}
+
+function drawWalls() {
+  for (var i = 0; i < WALLS.length; i++) {
+    var w = WALLS[i];
+    var x = w.x - w.w / 2, y = w.y - w.h / 2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x + 3, y - 4, w.w, w.h);
+
+    var g = ctx.createLinearGradient(x, y + w.h, x, y);
+    g.addColorStop(0, C.wallLo);
+    g.addColorStop(1, C.wallHi);
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w.w, w.h);
+
+    ctx.fillStyle = 'rgba(190,215,160,0.18)';
+    ctx.fillRect(x, y + w.h - 3, w.w, 3);
+
+    ctx.strokeStyle = C.wallEdge;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, w.w, w.h);
+  }
+}
+
+/* 特工形象：头盔 + 护目镜 + 步枪（俯视） */
+function drawAgent(x, y, ang, hostile, flash) {
+  var body = hostile ? (flash > 0 ? '#ffd9d2' : '#c2453a') : (flash > 0 ? '#ffd0d0' : '#6f7d5f');
+  var helm = hostile ? (flash > 0 ? '#ffe8e2' : '#8c2b22') : (flash > 0 ? '#ffe0e0' : '#3d4a30');
+  var gear = hostile ? '#2a1512' : '#1a2116';
+  var r = P_R;
+
+  /* 影子 */
+  ctx.beginPath();
+  ctx.ellipse(x + 1, y - 2, r * 1.05, r * 0.9, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);          /* +x 为前方（枪口朝向） */
+
+  /* 躯干 */
+  ctx.beginPath();
+  ctx.ellipse(-1, 0, r * 0.92, r * 0.78, 0, 0, Math.PI * 2);
+  ctx.fillStyle = body;
+  ctx.fill();
+  ctx.strokeStyle = gear;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  /* 肩甲 */
+  ctx.beginPath();
+  ctx.arc(-3, r * 0.62, 3.1, 0, Math.PI * 2);
+  ctx.arc(-3, -r * 0.62, 3.1, 0, Math.PI * 2);
+  ctx.fillStyle = gear;
+  ctx.fill();
+
+  /* 头盔 */
+  ctx.beginPath();
+  ctx.arc(2.2, 0, r * 0.52, 0, Math.PI * 2);
+  ctx.fillStyle = helm;
+  ctx.fill();
+
+  /* 护目镜 */
+  ctx.beginPath();
+  ctx.arc(4.4, 0, r * 0.3, -1.1, 1.1);
+  ctx.strokeStyle = hostile ? '#ffb3a0' : 'rgba(200,235,255,0.9)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* 步枪 */
+  ctx.fillStyle = gear;
+  ctx.fillRect(r * 0.5, -1.7, r * 1.15, 3.4);
+  ctx.fillRect(r * 0.2, -0.9, r * 1.6, 1.8);
+  ctx.fillStyle = hostile ? '#e06a5a' : '#98a884';
+  ctx.fillRect(r * 1.55, -0.9, 2.4, 1.8);
+
+  ctx.restore();
+}
+
+function drawPlayer() {
+  var ang = Math.atan2(aim.y - player.y, aim.x - player.x);
+
+  /* 脚下光圈 */
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, P_R + 8, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(217,164,65,0.5)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  drawAgent(player.x, player.y, ang, false, player.flash > 0);
+
+  if (muzzle > 0) {
+    var mx = player.x + Math.cos(ang) * (P_R + 16);
+    var my = player.y + Math.sin(ang) * (P_R + 16);
+    ctx.beginPath();
+    ctx.arc(mx, my, 6 * (muzzle / 0.05), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,225,150,0.9)';
+    ctx.fill();
+  }
+}
+
+function drawEnemies() {
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    drawAgent(e.x, e.y, e.aim, true, e.flash > 0);
+
+    var total = E_HP + (wave - 1) * 14;
+    if (e.hp < total) {
+      var pct = clamp(e.hp / total, 0, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(e.x - 15, e.y + E_R + 8, 30, 3.5);
+      ctx.fillStyle = pct > 0.5 ? '#9fd28a' : '#ffb86b';
+      ctx.fillRect(e.x - 15, e.y + E_R + 8, 30 * pct, 3.5);
+    }
+  }
+}
+
+function drawBullets() {
+  for (var i = 0; i < bullets.length; i++) {
+    var b = bullets[i];
+    var sp = len(b.vx, b.vy) || 1;
+    var tail = b.owner === 'p' ? 13 : 9;
+    var tx = b.x - b.vx / sp * tail, ty = b.y - b.vy / sp * tail;
+
+    ctx.strokeStyle = b.owner === 'p' ? 'rgba(255,220,150,0.95)' : 'rgba(255,140,120,0.95)';
+    ctx.lineWidth = b.owner === 'p' ? 2.6 : 2.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.owner === 'p' ? 2.4 : 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = b.owner === 'p' ? '#fff3cf' : '#ffd2c8';
+    ctx.fill();
+  }
+}
+
+function drawParticles() {
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    var a = Math.max(0, p.life / p.max);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * (0.4 + a * 0.8), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCrosshair() {
+  if (state !== 'playing' && state !== 'wavebreak') { return; }
+  var x = aim.x + recoil.x, y = aim.y + recoil.y;
+  ctx.strokeStyle = C.amberLt;
+  ctx.lineWidth = 1.6;
+
+  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke();
+
+  /* 四段括线 */
+  var g = 6, L = 5;
+  ctx.beginPath();
+  ctx.moveTo(x - g, y - g - L); ctx.lineTo(x - g, y - g);
+  ctx.moveTo(x - g, y - g); ctx.lineTo(x - g - L, y - g);
+  ctx.moveTo(x + g, y - g - L); ctx.lineTo(x + g, y - g);
+  ctx.moveTo(x + g, y - g); ctx.lineTo(x + g + L, y - g);
+  ctx.moveTo(x - g, y + g + L); ctx.lineTo(x - g, y + g);
+  ctx.moveTo(x - g, y + g); ctx.lineTo(x - g - L, y + g);
+  ctx.moveTo(x + g, y + g + L); ctx.lineTo(x + g, y + g);
+  ctx.moveTo(x + g, y + g); ctx.lineTo(x + g + L, y + g);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y, 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = C.amberLt;
+  ctx.fill();
+}
+
+function drawVignette() {
+  var g = ctx.createRadialGradient(0, 0, W * 0.32, 0, 0, W * 0.78);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(-W / 2, -H / 2, W, H);
+}
+
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  var ox = 0, oy = 0;
+  if (shake > 0.05) { ox = rand(-shake, shake); oy = rand(-shake, shake); }
+  ctx.setTransform(UNIT, 0, 0, -UNIT, cv.width / 2 + ox * UNIT, cv.height / 2 + oy * UNIT);
+
+  drawFloor();
+  drawWalls();
+  if (player) { drawPlayer(); }
+  drawEnemies();
+  drawBullets();
+  drawParticles();
+  drawVignette();
+  drawCrosshair();
+
+  if (hitFlash > 0) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    var a = Math.min(0.42, hitFlash * 1.6);
+    var vg = ctx.createRadialGradient(cv.width / 2, cv.height / 2, cv.width * 0.25, cv.width / 2, cv.height / 2, cv.width * 0.75);
+    vg.addColorStop(0, 'rgba(255,60,60,0)');
+    vg.addColorStop(1, 'rgba(255,60,60,' + a.toFixed(3) + ')');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+}
+
+/* ------------- 主循环 ------------- */
+var last = 0, acc = 0, FIXED = 1 / 120, lastAt = 0;
+function tick(ts) {
+  var now = (typeof ts === 'number' && ts > 0) ? ts : ((window.performance && performance.now) ? performance.now() : Date.now());
+  if (!last) { last = now; }
+  if (now < last) { now = last; }
+  var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  last = now;
+  lastAt = now;
+  acc = Math.min(acc + dt, 0.1);
+  var guard = 0;
+  while (acc >= FIXED && guard++ < 12) { update(FIXED); acc -= FIXED; }
+  if (acc < 0) { acc = 0; }
+  draw();
+}
+function loop(ts) { tick(ts); requestAnimationFrame(loop); }
+
+/* ------------- 输入 ------------- */
+function pointerToUnits(e) {
+  var rect = cv.getBoundingClientRect();
+  var px = (e.clientX - rect.left) / rect.width;
+  var py = (e.clientY - rect.top) / rect.height;
+  return { x: px * W - W / 2, y: H / 2 - py * H };
+}
+
+cv.addEventListener('pointermove', function (e) {
+  var p = pointerToUnits(e);
+  aim.x = p.x; aim.y = p.y;
+});
+cv.addEventListener('pointerdown', function (e) {
+  var p = pointerToUnits(e);
+  aim.x = p.x; aim.y = p.y;
+  firing = true;
+  e.preventDefault();
+});
+window.addEventListener('pointerup', function () { firing = false; });
+cv.addEventListener('pointercancel', function () { firing = false; });
+cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+window.addEventListener('keydown', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === 'w' || k === 'a' || k === 's' || k === 'd') { keys[k] = true; e.preventDefault(); }
+  else if (k === 'arrowup') { keys.w = true; e.preventDefault(); }
+  else if (k === 'arrowdown') { keys.s = true; e.preventDefault(); }
+  else if (k === 'arrowleft') { keys.a = true; e.preventDefault(); }
+  else if (k === 'arrowright') { keys.d = true; e.preventDefault(); }
+  else if (k === ' ') { firing = true; e.preventDefault(); }
+  else if (k === 'f') { toggleFullscreen(); }
+  else if (k === 'enter' && (state === 'intro' || state === 'over')) { startGame(); }
+});
+window.addEventListener('keyup', function (e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === 'w' || k === 'a' || k === 's' || k === 'd') { keys[k] = false; }
+  else if (k === 'arrowup') { keys.w = false; }
+  else if (k === 'arrowdown') { keys.s = false; }
+  else if (k === 'arrowleft') { keys.a = false; }
+  else if (k === 'arrowright') { keys.d = false; }
+  else if (k === ' ') { firing = false; }
+});
+
+window.addEventListener('blur', function () {
+  keys = Object.create(null);
+  firing = false;
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', startGame);
+
+/* ------------- 全屏 ------------- */
+var fsBtn = document.getElementById('fsBtn');
+function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (!isFull()) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { req.call(el).catch(function () {}); }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) { exit.call(document).catch(function () {}); }
+  }
+}
+fsBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', function () { setTimeout(resize, 60); });
+
+/* ------------- 启动 ------------- */
+player = { x: 0, y: -140, hp: P_HP, cool: 0, flash: 0 };
+enemies = []; bullets = []; particles = [];
+hud();
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
+requestAnimationFrame(loop);
+setInterval(function () {
+  var now = (window.performance && performance.now) ? performance.now() : Date.now();
+  if (now - lastAt < 100) { return; }
+  tick(now);
+}, 50);
+</script>
+<script src="pad.js"></script>
+</body>
+</html>

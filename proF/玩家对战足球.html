@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>玩家对战足球</title>
+<title>桌上足球 · 对战</title>
 <link rel="stylesheet" href="yc-ui.css">
 <style>
   #msg { position: absolute; left: 0; right: 0; top: 46%; transform: translateY(-50%);
@@ -31,7 +31,7 @@
     </div>
     <div class="overlay" id="intro">
       <div class="panel">
-        <h1>玩家对战足球</h1>
+        <h1>桌上足球 · 对战</h1>
         <p>同一台电脑 · 双人对战 · 先进 5 球获胜</p>
         <p>玩家1（蓝）<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>　玩家2（红）<kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></p>
         <p>各自只能在自己半场活动　<kbd>R</kbd> 重开　<kbd>Esc</kbd> 再看说明</p>
@@ -51,7 +51,7 @@
     <div class="overlay hidden" id="mobile">
       <div class="panel">
         <h1>这个游戏只能在电脑上玩</h1>
-        <p>「玩家对战足球」需要两个人在同一台电脑上各用一半键盘对战，手机没有键盘无法游玩。</p>
+        <p>「桌上足球 · 对战」需要两个人在同一台电脑上各用一半键盘对战，手机没有键盘无法游玩。</p>
         <p>请用电脑打开本页面，或回到主页选择其他游戏。</p>
         <button class="btn" id="backHome" type="button">返回主页</button>
       </div>
@@ -272,11 +272,14 @@ function update(dt) {
   stepBall(dt);
   collideBall(p1);
   collideBall(p2);
-  /* ---- 卡球检测：球真的贴在场边线或角落（含边线中段），且一直在原地不动 → 争球 ---- */
+  /* ---- 卡球检测：球贴在场边线或角落、正被球员顶着、且一直不动 → 争球 ---- */
   var _edgeGoalBand = Math.abs(ball.y) <= GOAL_HALF;
   var _atEdge = (ball.y + ball.r > FIELD.top - 4) || (ball.y - ball.r < FIELD.bottom + 4) ||
     (!_edgeGoalBand && (ball.x + ball.r > FIELD.right - 4 || ball.x - ball.r < FIELD.left + 4));
-  if (!_atEdge) {
+  var _touchA = len(ball.x - p1.x, ball.y - p1.y) <= p1.r + ball.r + 4;
+  var _touchB = len(ball.x - p2.x, ball.y - p2.y) <= p2.r + ball.r + 4;
+  var _touching = _touchA || _touchB;   /* 必须有一方正在顶着球，才算“卡住” */
+  if (!_atEdge || !_touching) {
     stuckTimer = 0; stuckRef.x = ball.x; stuckRef.y = ball.y;
   } else if (len(ball.x - stuckRef.x, ball.y - stuckRef.y) > STUCK_RADIUS) {
     stuckRef.x = ball.x; stuckRef.y = ball.y;
