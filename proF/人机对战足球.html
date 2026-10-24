@@ -216,7 +216,20 @@ function collideBall(body) {
   if (Math.abs(ball.y) > GOAL_HALF) {
     if (ball.x + ball.r > FIELD.right) { ball.x = FIELD.right - ball.r; if (ball.vx > 0) { ball.vx = 0; } }
     if (ball.x - ball.r < FIELD.left) { ball.x = FIELD.left + ball.r; if (ball.vx < 0) { ball.vx = 0; } }
-  }  boom(ball.x, ball.y, 'rgba(200,230,255,0.9)', 3);
+  }  /* 靠近对方球门时果断起脚射门（朝球门口中心），别只是慢慢往前蹭 */
+  var atk = (body.x < 0) ? 1 : -1;
+  var shootGoalX = atk * (FIELD.right - 8);
+  if (Math.abs(shootGoalX - ball.x) < 215) {
+    var sdx = shootGoalX - ball.x, sdy = -ball.y + (Math.random() - 0.5) * 40;
+    var sdl = len(sdx, sdy) || 1;
+    ball.vx += sdx / sdl * 150;
+    ball.vy += sdy / sdl * 150;
+  }
+
+  /* 球被顶到上下边线附近：接触时顺手把球往场内扫一点，避免一直顺着边线走 */
+  var edgeY = FIELD.top - 40;
+  if (ball.y > edgeY) { ball.vy -= 110; }
+  else if (ball.y < -edgeY) { ball.vy += 110; }  boom(ball.x, ball.y, 'rgba(200,230,255,0.9)', 3);
 }
 
 function separateBodies(a, b) {
@@ -295,9 +308,55 @@ var AI_PROFILES = {
 };
 var SHOT_POWER = 320;   /* 射门冲量：约 320 单位/秒 */
 /* ===================== 人机 AI（最简版：永远朝球的方向移动） ===================== */
+/* ============================================================
+ * 每个半场一个 AI，性格不同：
+ *   左方（蓝）：逼抢型 —— 球在视野内就一直压，抢到就往前推
+ *   右方（红）：稳守反击 —— 先卡住球与本方球门的连线，球进自己半场才上抢
+ * 都会：预判球位、绕到球的"身后"（远离对方球门那一侧）再推射、贴边线时从场内靠
+ * ============================================================ */
+var AI_STYLE = {
+  '-1': { pressPower: 1.0, lineRatio: 0.20, chasePush: 30 },   /* 左：逼抢型，压得更靠中线 */
+  '1':  { pressPower: 0.94, lineRatio: 0.32, chasePush: 24 }   /* 右：站位型，卡中线等拦截 */
+};
+
 function aiThinkFor(body, side, dt) {
-  /* 直接朝球的位置走；steerTo 会把它夹在自己半场里 */
-  steerTo(body, ball.x, ball.y, dt, 1.0, side);
+  var style = AI_STYLE[String(side)] || AI_STYLE['1'];
+  /* side = 自己所在半场（-1 左 / +1 右）；进攻方向相反：左方攻右门，右方攻左门 */
+  var dir = -side;
+
+  var px = ball.x + ball.vx * 0.17;          /* 预判 0.17 秒后的球位 */
+  var py = ball.y + ball.vy * 0.17;
+  var ballOnMySide = (ball.x * side) > -40;  /* 球在我方半场（含刚过中线一点） */
+
+  var tx, ty;
+  if (ballOnMySide) {
+    /* 以"把球顶向球门中心"为目标：先算出球门方向 */
+    var gx = dir * (FIELD.right - 8), gy = 0;
+    var vx2 = gx - px, vy2 = gy - py;
+    var vl = len(vx2, vy2) || 1;
+    var aimX = vx2 / vl, aimY = vy2 / vl;        /* 球 → 球门 的单位向量 */
+
+    /* 身体在球的"球门反方向"一侧，说明已经站在球的后面 */
+    var bodyBehind = ((px - body.x) * aimX + (py - body.y) * aimY) > 0;
+
+    if (bodyBehind) {
+      /* 已经就位：直接冲球，接触时自然把球往球门方向顶 */
+      tx = px;
+      ty = py;
+    } else {
+      /* 绕到球的后面（沿球门方向的反向偏移） */
+      tx = px - aimX * style.chasePush;
+      ty = py - aimY * style.chasePush;
+    }
+  } else {
+    /* 球在对方半场：回中线卡位，纵向跟着球，等它回来 */
+    tx = side * (FIELD.right * style.lineRatio);
+    ty = clamp(py * 0.6, -FIELD.top * 0.7, FIELD.top * 0.7);
+    /* 球正往我这边飞：提前迎上去抢断 */
+    if (ball.vx * side > 60) { tx = side * (FIELD.right * 0.10); }
+  }
+
+  steerTo(body, tx, ty, dt, style.pressPower, side);
 }
 /* 朝目标点移动（限制在自己半场） */
 function steerTo(body, tx, ty, dt, power, side) {
