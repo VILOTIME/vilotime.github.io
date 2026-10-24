@@ -287,7 +287,7 @@
         }
         @keyframes yc-spin { to { transform: rotate(360deg); } }
 
-        /* ---------- 手机：折叠式导航 ---------- */
+        /* ---------- 手机：圆角抽屉式侧栏 ---------- */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -295,7 +295,7 @@
                 overflow: hidden;
             }
 
-            /* 顶部一条很窄的工具条：菜单按钮 + 当前游戏 + 主题 */
+            /* 顶部细工具条 */
             .sidebar {
                 position: relative;
                 width: 100%;
@@ -309,7 +309,7 @@
                 overflow: visible;
                 border-right: none;
                 border-bottom: 1px solid var(--shell-line);
-                z-index: 30;
+                z-index: 70;              /* 必须高于遮罩，否则抽屉会被遮罩的模糊盖住 */
             }
             .brand { display: none; }
 
@@ -321,13 +321,15 @@
                 width: 38px;
                 height: 38px;
                 padding: 0;
-                border-radius: 10px;
+                border-radius: 11px;
                 background-color: var(--shell-btn-bg);
                 border: 1px solid var(--shell-btn-border);
                 cursor: pointer;
+                transition: border-color .2s ease, background-color .2s ease, transform .12s ease;
                 -webkit-tap-highlight-color: transparent;
                 touch-action: manipulation;
             }
+            .nav-toggle:active { transform: scale(.94); }
             .nav-toggle .bars,
             .nav-toggle .bars::before,
             .nav-toggle .bars::after {
@@ -337,16 +339,16 @@
                 height: 2px;
                 border-radius: 2px;
                 background-color: var(--shell-text);
-                transition: transform .22s ease, opacity .18s ease;
+                transition: transform .26s cubic-bezier(.22,.9,.3,1), opacity .18s ease;
             }
             .nav-toggle .bars { position: relative; }
             .nav-toggle .bars::before { position: absolute; left: 0; top: -5px; }
             .nav-toggle .bars::after { position: absolute; left: 0; top: 5px; }
+            .sidebar.open .nav-toggle { border-color: var(--shell-accent); background-color: var(--shell-active-bg); }
             .sidebar.open .nav-toggle .bars { background-color: transparent; }
             .sidebar.open .nav-toggle .bars::before { transform: translateY(5px) rotate(45deg); }
             .sidebar.open .nav-toggle .bars::after { transform: translateY(-5px) rotate(-45deg); }
 
-            /* 工具条上的当前游戏名 */
             .mini-game {
                 display: flex;
                 flex: 1 1 auto;
@@ -370,54 +372,111 @@
                 height: 38px;
                 padding: 0;
                 margin: 0;
-                border-radius: 10px;
+                border-radius: 11px;
             }
             .theme-text { display: none; }
 
-            /* 收起时隐藏菜单，展开时变成下拉面板 */
+            /* ---------- 圆角抽屉面板 ---------- */
             .nav {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
+                position: fixed;
+                top: 62px;
+                left: 8px;
+                bottom: 8px;
+                width: min(78vw, 300px);
+                display: flex;
                 flex-direction: column;
                 gap: 2px;
-                padding: 10px 10px 14px;
+                padding: 10px;
                 background-color: var(--shell-bg);
-                border-bottom: 1px solid var(--shell-line);
-                box-shadow: 0 20px 34px -18px rgba(0, 0, 0, .45);
-                max-height: calc(100dvh - 150px);
+                border: 1px solid var(--shell-line);
+                border-radius: 20px;
+                box-shadow: 0 26px 52px -22px rgba(0, 0, 0, .55), 0 3px 10px rgba(0, 0, 0, .16);
                 overflow-y: auto;
+                overscroll-behavior: contain;
                 -webkit-overflow-scrolling: touch;
-                z-index: 40;
+                z-index: 1;
+                transform: translateX(-118%) scale(.96);
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                /* 关闭时：先播完收回动画，最后才真正隐藏 */
+                transition:
+                    transform .34s cubic-bezier(.22, .9, .3, 1),
+                    opacity .24s ease,
+                    visibility 0s linear .34s;
             }
-            .sidebar.open .nav { display: flex; }
-            .nav-group { margin: 12px 0 6px; }
+            .sidebar.open .nav {
+                transform: translateX(0) scale(1);
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                /* 打开时：立即可见，动画跑完再收尾 */
+                transition:
+                    transform .34s cubic-bezier(.22, .9, .3, 1),
+                    opacity .24s ease,
+                    visibility 0s linear 0s;
+            }
+
+            /* 逐项入场动画 */
+            .sidebar.open .nav > * {
+                animation: yc-navIn .30s cubic-bezier(.22, .9, .3, 1) both;
+            }
+            .sidebar.open .nav > *:nth-child(1) { animation-delay: .03s; }
+            .sidebar.open .nav > *:nth-child(2) { animation-delay: .06s; }
+            .sidebar.open .nav > *:nth-child(3) { animation-delay: .09s; }
+            .sidebar.open .nav > *:nth-child(4) { animation-delay: .12s; }
+            .sidebar.open .nav > *:nth-child(5) { animation-delay: .15s; }
+            .sidebar.open .nav > *:nth-child(6) { animation-delay: .18s; }
+            .sidebar.open .nav > *:nth-child(7) { animation-delay: .21s; }
+            .sidebar.open .nav > *:nth-child(8) { animation-delay: .24s; }
+            .sidebar.open .nav > *:nth-child(9) { animation-delay: .27s; }
+            .sidebar.open .nav > *:nth-child(n+10) { animation-delay: .30s; }
+
+            @keyframes yc-navIn {
+                from { opacity: 0; transform: translateX(-12px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+
+            .nav-group {
+                margin: 12px 0 6px;
+                padding-left: 8px;
+            }
+            .nav-group:first-child { margin-top: 2px; }
+
             .sidebar a {
                 flex: 0 0 auto;
                 gap: 9px;
                 padding: 11px 12px;
                 font-size: 14px;
-                border-radius: 10px;
+                border-radius: 12px;
             }
-            .sidebar a.active::before { display: block; }
+            .sidebar a.active { border-radius: 12px; }
+            .sidebar a.active::before {
+                display: block;
+                top: 10px;
+                bottom: 10px;
+                border-radius: 0 3px 3px 0;
+            }
             .sidebar a .tag { display: inline-block; }
 
+            /* 遮罩：淡入淡出 */
             .nav-backdrop {
-                display: none;
+                display: block;
                 position: fixed;
-                inset: 54px 0 0 0;
-                background-color: rgba(8, 14, 24, .38);
-                backdrop-filter: blur(1.5px);
-                z-index: 20;
+                inset: 0;
+                background-color: rgba(8, 14, 24, .48);
+                z-index: 55;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity .26s ease, visibility .26s ease;
             }
-            .nav-backdrop.show { display: block; }
+            .nav-backdrop.show { opacity: 1; visibility: visible; }
 
             .content { flex: 1 1 auto; min-height: 0; padding: 8px; }
-            .gamebar { display: none; }          /* 当前游戏名已经显示在工具条上 */
+            .gamebar { display: none; }
             .frame-wrap { border-radius: 10px; }
-        }    </style>
+        }
+    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
