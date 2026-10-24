@@ -20,6 +20,14 @@
   .hpbar i.mid { background: linear-gradient(90deg, #ffd166, #ffe6a3); }
   .hpbar i.low { background: linear-gradient(90deg, #ff6b6b, #ffb199); }
   #hud b { font-variant-numeric: tabular-nums; }
+  #hud .chip { white-space: nowrap; }
+  /* 窄屏：HP 条缩短、中间标题隐藏，保证一行放得下 */
+  @media (max-width: 640px) {
+    #hud { font-size: 12px; gap: 6px; }
+    #hud .chip { padding: 4px 8px; }
+    #hud .chip:nth-child(2) { display: none; }
+    .hpbar { width: clamp(48px, 14vw, 76px); }
+  }
 </style>
 </head>
 <body>
@@ -65,6 +73,15 @@
         <p>我方剩余 <b id="finalMe">0</b>　敌方剩余 <b id="finalAi">0</b></p>
         <p id="overComment"></p>
         <button class="btn" id="retryBtn" type="button">再来一局</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="mobile">
+      <div class="panel">
+        <h1>这个游戏只能在电脑上玩</h1>
+        <p>「CS 平面战场」需要键盘走位 + 鼠标瞄准射击，手机 / 平板上没法正常操作。</p>
+        <p>请用电脑打开本页面，或回主页挑个手机能玩的游戏。</p>
+        <button class="btn" id="mobileBack" type="button">返回主页</button>
       </div>
     </div>
   </div>
@@ -247,6 +264,23 @@ var firing = false, qDown = false;
 var keys = Object.create(null);
 var bannerTimer = 0, hitFlash = 0, shake = 0;
 
+/* 纯触屏设备（手机 / 平板）判定 */
+function isTouchOnlyDevice() {
+  try {
+    var tp = navigator.maxTouchPoints || 0;
+    var ua = navigator.userAgent || '';
+    var mobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua);
+    if (window.matchMedia) {
+      var coarse = window.matchMedia('(pointer: coarse)').matches;
+      var noHover = window.matchMedia('(hover: none)').matches;
+      if (coarse && noHover) { return true; }
+      if (mobileUA) { return true; }
+    }
+    return mobileUA || (tp > 0 && window.matchMedia && !window.matchMedia('(any-pointer: fine)').matches);
+  } catch (e) { return false; }
+}
+var touchOnly = isTouchOnlyDevice();
+
 var elHpMe = document.getElementById('hpMe');
 var elHpAi = document.getElementById('hpAi');
 var elBarMe = document.getElementById('barMe');
@@ -292,6 +326,7 @@ function burst(x, y, color, n, speed) {
 
 /* ---------- 开局 ---------- */
 function startGame() {
+  if (touchOnly) { return; }
   me = { x: PLAYER_SPAWN.x, y: PLAYER_SPAWN.y, hp: HP_MAX, dir: 0, flash: 0 };
   ai = { x: AI_SPAWN.x, y: AI_SPAWN.y, hp: HP_MAX, dir: 0, flash: 0, legLeft: 0, speed: 45, aimDir: Math.PI, fireCool: 0.8, strafeDir: 1, sees: false, alert: 0 };
   aiCross = { x: -45, y: -10 };
@@ -711,6 +746,15 @@ fsBtn.addEventListener('click', toggleFullscreen);
 document.addEventListener('fullscreenchange', function () { setTimeout(resize, 60); });
 
 /* ---------- 启动 ---------- */
+if (touchOnly) {
+  state = 'blocked';
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('mobile').classList.remove('hidden');
+  document.getElementById('mobileBack').addEventListener('click', function () {
+    location.href = '主页.html';
+  });
+}
 me = { x: PLAYER_SPAWN.x, y: PLAYER_SPAWN.y, hp: HP_MAX, dir: 0, flash: 0 };
 ai = { x: AI_SPAWN.x, y: AI_SPAWN.y, hp: HP_MAX, dir: 0, flash: 0, legLeft: 0, speed: 45, aimDir: Math.PI, fireCool: 0.8, strafeDir: 1, sees: false, alert: 0 };
 aiCross = { x: -45, y: -10 };
@@ -726,6 +770,5 @@ setInterval(function () {
   tick(now);
 }, 50);
 </script>
-<script src="pad.js"></script>
 </body>
 </html>

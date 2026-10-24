@@ -17,19 +17,26 @@
   * { box-sizing: border-box; }
   :root {
     color-scheme: light;
-    --bg: #eef2f7;
+    --bg: #e7edf5;
     --bg2: #ffffff;
-    --glow: rgba(79, 156, 249, 0.16);
+    --glow: rgba(79, 156, 249, 0.22);
     --header-from: #2b3a4b;
     --header-to: #3f5a78;
-    --header-shadow: 0 4px 18px rgba(20, 35, 55, 0.18);
+    --header-shadow: 0 6px 22px rgba(20, 35, 55, 0.26);
     --accent: #4f9cf9;
     --card-bg: #ffffff;
-    --card-border: #e4eaf2;
-    --card-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 10px 22px -14px rgba(16, 24, 40, 0.22);
-    --title: #1f2d3d;
-    --muted: #7b8a9c;
+    --card-border: #d7e0ec;
+    /* 浅色：只保留一层贴地投影 + 一层柔和中层阴影，不要大范围光晕 */
+    --card-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.08),
+      0 6px 14px -8px rgba(15, 23, 42, 0.16);
+    --title: #1b2836;
+    --muted: #6c7b8f;
     --header-text: #ffffff;
+  }
+  html[data-theme="dark"] .card {
+    background-image: linear-gradient(180deg, #1d2734 0%, #18202b 100%);
+    box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   html[data-theme="dark"] {
     color-scheme: dark;
@@ -144,8 +151,9 @@
     overflow: hidden;
     border-radius: 16px;
     background-color: var(--card-bg);
+    background-image: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
     border: 1px solid var(--card-border);
-    box-shadow: var(--card-shadow);
+    box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.9);
     text-decoration: none;
     color: inherit;
     transition: transform .26s cubic-bezier(.2, .8, .3, 1), box-shadow .26s ease, border-color .26s ease;
@@ -167,6 +175,7 @@
     background-image:
       radial-gradient(circle at 28% 18%, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 62%),
       linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .18);
   }
   .cover .emoji {
     font-size: 38px;
@@ -280,18 +289,18 @@
     </a>
     <a class="card" href="任意球练习.html" style="--c1:#f0913f;--c2:#b35b12;--glow-c:rgba(240,145,63,.5)">
       <div class="cover"><span class="emoji">🥅</span><span class="go">→</span></div>
-      <div class="meta"><h3>任意球大师</h3><p>选角度 · 预判扑救点位</p></div>
+      <div class="meta"><h3>点球大师</h3><p>选角度 · 预判扑救点位</p></div>
     </a>
   </div>
 
   <div class="sec"><span class="ic">🎯</span><h2>射击</h2><span class="bar"></span><span class="num">3 款</span></div>
   <div class="grid">
     <a class="card" href="CS平面版.html" style="--c1:#4a6fa5;--c2:#22344f;--glow-c:rgba(74,111,165,.5)">
-      <div class="cover"><span class="emoji">🎯</span><span class="go">→</span></div>
+      <div class="cover"><span class="pc">仅电脑</span><span class="emoji">🎯</span><span class="go">→</span></div>
       <div class="meta"><h3>CS 平面战场</h3><p>俯视 1v1 · 20 血对决</p></div>
     </a>
     <a class="card" href="CS秘密行动.html" style="--c1:#6b7a3a;--c2:#3a4520;--glow-c:rgba(107,122,58,.5)">
-      <div class="cover"><span class="emoji">🔫</span><span class="go">→</span></div>
+      <div class="cover"><span class="pc">仅电脑</span><span class="emoji">🔫</span><span class="go">→</span></div>
       <div class="meta"><h3>CS 秘密行动</h3><p>一波波清剿 · 战术走位</p></div>
     </a>
     <a class="card" href="叶初打飞机.html" style="--c1:#4f6bd8;--c2:#24307a;--glow-c:rgba(79,107,216,.5)">
@@ -311,6 +320,25 @@
 </div>
 
 <div class="footer">叶初小游戏 · 全部用 Canvas 重写</div>
+
+<script>
+/* 点了哪张卡片就告诉外壳（parent），让侧边栏和顶部标题立刻切过去。
+   用 postMessage，file:// 打开也能生效。 */
+document.addEventListener('click', function (e) {
+  var a = e.target.closest ? e.target.closest('.card') : null;
+  if (!a) { return; }
+  var href = a.getAttribute('href') || '';
+  var nm = a.querySelector('h3');
+  var ic = a.querySelector('.emoji');
+  try {
+    window.parent.postMessage({
+      ycNav: href,
+      name: nm ? nm.textContent : '',
+      icon: ic ? ic.textContent : '🎮'
+    }, '*');
+  } catch (err) {}
+}, true);
+</script>
 
 <script>
 /* 主页只负责跟随主题；切换按钮统一放在外壳页面 index.html */

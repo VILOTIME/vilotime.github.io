@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>叶初小游戏</title>
-    <meta name="description" content="叶初小游戏 —— CS 平面战场、双人足球、任意球大师、玩家对战足球等小游戏合集">
+    <meta name="description" content="叶初小游戏 —— 绿茵足球、桌上足球、点球大师、CS 平面战场、星海突击、方块风暴等小游戏合集">
     <meta name="theme-color" content="#2b3a4b">
     <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="叶初小游戏">
     <meta property="og:title" content="叶初小游戏">
-    <meta property="og:description" content="CS 平面战场、双人足球、任意球大师、玩家对战足球等小游戏合集">
+    <meta property="og:description" content="绿茵足球、桌上足球、点球大师、CS 平面战场、星海突击、方块风暴等小游戏合集">
     <meta property="og:url" content="https://vilotime.github.io/">
     <meta property="og:image" content="https://vilotime.github.io/cover.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="叶初小游戏">
-    <meta name="twitter:description" content="CS 平面战场、双人足球、任意球大师、玩家对战足球等小游戏合集">
+    <meta name="twitter:description" content="绿茵足球、桌上足球、点球大师、CS 平面战场、星海突击、方块风暴等小游戏合集">
     <meta name="twitter:image" content="https://vilotime.github.io/cover.png">
     <script>
         /* 提前决定主题，避免首屏闪白/闪黑 */
@@ -30,98 +30,229 @@
         })();
     </script>
     <style>
-        /* 在这里添加CSS样式 */
         :root {
             color-scheme: light;
-            --shell-bg: #f1f1f1;
-            --shell-content-bg: #eef2f7;
-            --shell-text: #1f2d3d;
-            --shell-hover: #dde3ea;
+            --shell-bg: #ffffff;
+            --shell-content-bg: #e7edf5;
+            --shell-text: #1b2836;
+            --shell-muted: #6c7b8f;
+            --shell-hover: #eef3fa;
+            --shell-active-bg: rgba(79, 156, 249, .13);
             --shell-btn-bg: #ffffff;
-            --shell-btn-border: #d6dce5;
+            --shell-btn-border: #d7e0ec;
+            --shell-line: #e3eaf3;
             --shell-accent: #4f9cf9;
+            --shell-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 10px 24px -16px rgba(15, 23, 42, .3);
         }
         html[data-theme="dark"] {
             color-scheme: dark;
             --shell-bg: #161c26;
             --shell-content-bg: #0f141a;
             --shell-text: #dbe4f0;
-            --shell-hover: #26313f;
+            --shell-muted: #8d9db2;
+            --shell-hover: #1e2734;
+            --shell-active-bg: rgba(90, 166, 255, .16);
             --shell-btn-bg: #1b2230;
             --shell-btn-border: #2f3b4d;
+            --shell-line: #24303f;
             --shell-accent: #5aa6ff;
+            --shell-shadow: 0 1px 3px rgba(0, 0, 0, .5), 0 12px 28px -18px rgba(0, 0, 0, .8);
         }
+        * { box-sizing: border-box; }
         body {
             font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif;
             display: flex;
             height: 100vh;
             margin: 0;
+            color: var(--shell-text);
             background-color: var(--shell-content-bg);
             -webkit-text-size-adjust: 100%;
+            transition: background-color .25s ease, color .25s ease;
         }
+
+        /* ---------- 侧边栏 ---------- */
         .sidebar {
-            width: 200px;
+            width: 216px;
+            flex: 0 0 216px;
+            display: flex;
+            flex-direction: column;
             background-color: var(--shell-bg);
-            padding: 10px;
-            box-sizing: border-box;
-            color: var(--shell-text);
+            border-right: 1px solid var(--shell-line);
+            padding: 14px 12px 16px;
+            overflow-y: auto;
+            transition: background-color .25s ease, border-color .25s ease;
         }
-        .sidebar h2 {
-            margin: 0 0 10px;
-            font-size: 18px;
-        }
-        .sidebar a {
-            display: block;
-            padding: 5px;
-            text-decoration: none;
-            color: var(--shell-text);
-            border-radius: 4px;
-        }
-        .sidebar a:hover {
-            background-color: var(--shell-hover);
-        }
-        .theme-toggle {
-            display: inline-flex;
+        .brand {
+            display: flex;
             align-items: center;
+            gap: 8px;
+            padding: 2px 4px 12px;
+            border-bottom: 1px solid var(--shell-line);
+            margin-bottom: 12px;
+        }
+        .brand-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: var(--shell-accent);
+            box-shadow: 0 0 0 4px rgba(79, 156, 249, .16);
+            flex: 0 0 auto;
+        }
+        .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+        }
+        .brand-sub {
+            margin-left: auto;
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--shell-muted);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 6px;
-            margin: 0 0 10px;
-            padding: 5px 11px;
+            width: 100%;
+            margin: 0 0 14px;
+            padding: 7px 10px;
             font-family: inherit;
             font-size: 12px;
             line-height: 1;
             color: var(--shell-text);
             background-color: var(--shell-btn-bg);
             border: 1px solid var(--shell-btn-border);
-            border-radius: 999px;
+            border-radius: 9px;
             cursor: pointer;
-            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            transition: background-color .2s ease, border-color .2s ease, transform .12s ease;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .theme-toggle:hover {
-            border-color: var(--shell-accent);
+        .theme-toggle:hover { border-color: var(--shell-accent); }
+        .theme-toggle:active { transform: scale(.98); }
+        .theme-icon { font-size: 13px; line-height: 1; }
+
+        .nav { display: flex; flex-direction: column; gap: 2px; }
+        .nav-group {
+            margin: 14px 0 6px;
+            padding-left: 10px;
+            font-size: 10.5px;
+            letter-spacing: 2px;
+            color: var(--shell-muted);
+            font-weight: 700;
         }
-        .theme-toggle:active {
-            transform: scale(0.96);
+        .nav-group:first-child { margin-top: 2px; }
+        .sidebar a {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 10px;
+            font-size: 13.5px;
+            line-height: 1.3;
+            text-decoration: none;
+            color: var(--shell-text);
+            border-radius: 9px;
+            transition: background-color .16s ease, color .16s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        .theme-icon {
-            font-size: 13px;
+        .sidebar a .ic {
+            width: 18px;
+            flex: 0 0 18px;
+            text-align: center;
+            font-size: 14px;
             line-height: 1;
         }
+        .sidebar a .nm {
+            flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar a .tag {
+            flex: 0 0 auto;
+            font-size: 9.5px;
+            letter-spacing: .5px;
+            color: var(--shell-muted);
+            border: 1px solid var(--shell-line);
+            border-radius: 5px;
+            padding: 1px 4px;
+        }
+        .sidebar a:hover { background-color: var(--shell-hover); }
+        .sidebar a.active {
+            background-color: var(--shell-active-bg);
+            color: var(--shell-accent);
+            font-weight: 700;
+        }
+        .sidebar a.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background-color: var(--shell-accent);
+        }
+        .sidebar a.active .tag { color: var(--shell-accent); border-color: var(--shell-accent); }
+
+        /* ---------- 内容区 ---------- */
         .content {
-            flex-grow: 1;
-            padding: 10px;
-            box-sizing: border-box;
+            flex: 1 1 auto;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 12px 12px 10px;
+        }
+        .gamebar {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 4px 10px;
+        }
+        .gb-ic {
+            font-size: 17px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .16));
+        }
+        .gb-name {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gb-label {
+            margin-left: auto;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--shell-muted);
+            white-space: nowrap;
+        }
+        .frame-wrap {
+            flex: 1 1 auto;
+            min-height: 0;
+            background-color: #0b1220;
+            border: 1px solid var(--shell-line);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shell-shadow);
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
             display: block;
+            background-color: #0b1220;
         }
 
-        /* 移动端适配：导航改为顶部横向滚动条 */
+        /* ---------- 手机：导航变顶部横向胶囊 ---------- */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -131,73 +262,214 @@
             .sidebar {
                 width: 100%;
                 flex: 0 0 auto;
-                display: flex;
+                flex-direction: row;
                 align-items: center;
-                flex-wrap: nowrap;
-                overflow-x: auto;
                 gap: 6px;
                 padding: 8px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                border-right: none;
+                border-bottom: 1px solid var(--shell-line);
+                -webkit-overflow-scrolling: touch;
             }
-            .sidebar h2 {
-                flex: 0 0 auto;
-                margin: 0 4px 0 0;
-                font-size: 14px;
-                white-space: nowrap;
-            }
+            .brand { padding: 0 8px 0 2px; border-bottom: none; margin-bottom: 0; flex: 0 0 auto; }
+            .brand-sub { display: none; }
+            .brand-name { font-size: 13px; }
             .theme-toggle {
                 flex: 0 0 auto;
-                order: -1;
+                width: 34px;
+                height: 34px;
+                padding: 0;
                 margin: 0;
-                padding: 7px;
                 border-radius: 50%;
+                order: -1;
             }
-            .theme-text {
-                display: none;
+            .theme-text { display: none; }
+            .nav { flex-direction: row; align-items: center; gap: 6px; }
+            .nav-group {
+                margin: 0;
+                padding: 0 2px 0 6px;
+                font-size: 10px;
+                letter-spacing: 1px;
+                white-space: nowrap;
+                writing-mode: horizontal-tb;
             }
             .sidebar a {
                 flex: 0 0 auto;
-                padding: 6px 10px;
-                background-color: var(--shell-btn-bg);
+                gap: 5px;
+                padding: 7px 11px;
+                font-size: 12.5px;
                 border: 1px solid var(--shell-btn-border);
-                border-radius: 4px;
-                font-size: 13px;
-                white-space: nowrap;
+                background-color: var(--shell-btn-bg);
+                border-radius: 999px;
             }
-            .content {
-                flex: 1 1 auto;
-                padding: 0;
-                min-height: 0;
+            .sidebar a.active {
+                border-color: var(--shell-accent);
+                box-shadow: 0 0 0 3px var(--shell-active-bg);
             }
+            .sidebar a.active::before { display: none; }
+            .sidebar a .tag { display: none; }
+            .content { flex: 1 1 auto; min-height: 0; padding: 8px; }
+            .gamebar { padding: 0 2px 8px; gap: 8px; }
+            .gb-name { font-size: 14px; }
+            .gb-label { display: none; }
+            .frame-wrap { border-radius: 10px; }
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>导航列表</h2>
+        <div class="brand">
+            <span class="brand-dot" aria-hidden="true"></span>
+            <span class="brand-name">叶初小游戏</span>
+            <span class="brand-sub">9 款</span>
+        </div>
+
         <button type="button" class="theme-toggle" id="themeToggle" title="切换主题">
             <span class="theme-icon" aria-hidden="true">🖥️</span>
             <span class="theme-text">跟随系统</span>
         </button>
-        <!-- 游戏列表 -->
-        <a href="proF/主页.html" target="gameFrame">主页</a>
-        <a href="proF/11人足球.html" target="gameFrame">绿茵足球</a>
-        <a href="proF/玩家对战足球.html" target="gameFrame">桌上足球 · 对战</a>
-        <a href="proF/双人足球.html" target="gameFrame">桌上足球 · 人机</a>
-        <a href="proF/人机对战足球.html" target="gameFrame">桌上足球 · 观战</a>
-        <a href="proF/任意球练习.html" target="gameFrame">任意球大师</a>
-        <a href="proF/CS平面版.html" target="gameFrame">CS 平面战场</a>
-        <a href="proF/CS秘密行动.html" target="gameFrame">CS 秘密行动</a>
-        <a href="proF/叶初打飞机.html" target="gameFrame">星海突击</a>
-        <a href="proF/俄罗斯方块.html" target="gameFrame">方块风暴</a>
-        <!-- 更多游戏链接 -->
+
+        <nav class="nav" id="nav">
+            <a href="proF/主页.html" target="gameFrame" data-icon="🏠" data-name="主页" class="active">
+                <span class="ic" aria-hidden="true">🏠</span><span class="nm">主页</span>
+            </a>
+
+            <div class="nav-group">⚽ 足球</div>
+            <a href="proF/11人足球.html" target="gameFrame" data-icon="🏟️" data-name="绿茵足球">
+                <span class="ic" aria-hidden="true">🏟️</span><span class="nm">绿茵足球</span>
+            </a>
+            <a href="proF/玩家对战足球.html" target="gameFrame" data-icon="🆚" data-name="桌上足球 · 对战">
+                <span class="ic" aria-hidden="true">🆚</span><span class="nm">桌上足球 · 对战</span><span class="tag">电脑</span>
+            </a>
+            <a href="proF/双人足球.html" target="gameFrame" data-icon="🤖" data-name="桌上足球 · 人机">
+                <span class="ic" aria-hidden="true">🤖</span><span class="nm">桌上足球 · 人机</span>
+            </a>
+            <a href="proF/人机对战足球.html" target="gameFrame" data-icon="👀" data-name="桌上足球 · 观战">
+                <span class="ic" aria-hidden="true">👀</span><span class="nm">桌上足球 · 观战</span>
+            </a>
+            <a href="proF/任意球练习.html" target="gameFrame" data-icon="🥅" data-name="点球大师">
+                <span class="ic" aria-hidden="true">🥅</span><span class="nm">点球大师</span>
+            </a>
+
+            <div class="nav-group">🎯 射击</div>
+            <a href="proF/CS平面版.html" target="gameFrame" data-icon="🎯" data-name="CS 平面战场">
+                <span class="ic" aria-hidden="true">🎯</span><span class="nm">CS 平面战场</span><span class="tag">电脑</span>
+            </a>
+            <a href="proF/CS秘密行动.html" target="gameFrame" data-icon="🔫" data-name="CS 秘密行动">
+                <span class="ic" aria-hidden="true">🔫</span><span class="nm">CS 秘密行动</span><span class="tag">电脑</span>
+            </a>
+            <a href="proF/叶初打飞机.html" target="gameFrame" data-icon="✈️" data-name="星海突击">
+                <span class="ic" aria-hidden="true">✈️</span><span class="nm">星海突击</span>
+            </a>
+
+            <div class="nav-group">🧩 休闲</div>
+            <a href="proF/俄罗斯方块.html" target="gameFrame" data-icon="🧩" data-name="方块风暴">
+                <span class="ic" aria-hidden="true">🧩</span><span class="nm">方块风暴</span>
+            </a>
+        </nav>
     </div>
-    
+
     <div class="content">
-        <!-- 游戏显示区域 -->
-        <iframe name="gameFrame" src="proF/主页.html"></iframe>
+        <div class="gamebar">
+            <span class="gb-ic" id="gbIcon" aria-hidden="true">🏠</span>
+            <span class="gb-name" id="gbName">主页</span>
+            <span class="gb-label">当前游戏 · 点左侧切换</span>
+        </div>
+        <div class="frame-wrap">
+            <iframe name="gameFrame" id="gameFrame" src="proF/主页.html" title="游戏画面"></iframe>
+        </div>
     </div>
 
 <script>
+/* ---------- 导航高亮 + 顶部当前游戏 ---------- */
+(function () {
+    var nav = document.getElementById('nav');
+    var links = nav.querySelectorAll('a');
+    var gbIcon = document.getElementById('gbIcon');
+    var gbName = document.getElementById('gbName');
+    var frame = document.getElementById('gameFrame');
+    var baseTitle = '叶初小游戏';
+
+    function decodeSafe(s) {
+        try { return decodeURIComponent(s); } catch (e) { return s; }
+    }
+    function findLinkByFile(file) {
+        var target = decodeSafe(file || '');
+        for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href') || '';
+            var tail = decodeSafe(href.split('/').pop());
+            if (tail === target) { return links[i]; }
+        }
+        return null;
+    }
+
+    function highlight(link, updateTitle) {
+        for (var i = 0; i < links.length; i++) { links[i].classList.remove('active'); }
+        if (!link) {
+            gbIcon.textContent = '🏠';
+            gbName.textContent = '主页';
+            document.title = baseTitle;
+            return;
+        }
+        link.classList.add('active');
+        gbIcon.textContent = link.getAttribute('data-icon') || '🎮';
+        gbName.textContent = link.getAttribute('data-name') || link.textContent.trim();
+        if (updateTitle !== false) {
+            var nm = link.getAttribute('data-name') || '';
+            document.title = nm && nm !== '主页' ? nm + ' · ' + baseTitle : baseTitle;
+        }
+        /* 让当前项在窄屏横向导航里可见 */
+        try {
+            if (nav.scrollWidth > nav.clientWidth || link.scrollIntoView) {
+                link.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+            }
+        } catch (e) {}
+    }
+
+    for (var i = 0; i < links.length; i++) {
+        links[i].addEventListener('click', function () {
+            highlight(this, true);
+        });
+    }
+
+    /* 内嵌页加载完后同步一次（同源时能拿到真实地址，比如从主页点卡片进去） */
+    frame.addEventListener('load', function () {
+        var file = null;
+        try {
+            var path = frame.contentWindow.location.pathname || '';
+            file = decodeSafe(path.split('/').pop() || '');
+        } catch (e) { return; }
+        if (!file) { return; }
+        var link = findLinkByFile(file);
+        if (link) { highlight(link, true); }
+        else {
+            /* 认不出的页面（比如备份页），只显示文件名 */
+            for (var j = 0; j < links.length; j++) { links[j].classList.remove('active'); }
+            gbIcon.textContent = '📄';
+            gbName.textContent = decodeURIComponent(file).replace(/\.html$/i, '');
+            document.title = decodeURIComponent(file).replace(/\.html$/i, '') + ' · ' + baseTitle;
+        }
+    });
+
+    /* 主页里点卡片时，由主页 postMessage 通知（跨域 / file:// 也能生效） */
+    window.addEventListener('message', function (e) {
+        var d = e && e.data;
+        if (!d || !d.ycNav) { return; }
+        var link = findLinkByFile(d.ycNav);
+        if (link) { highlight(link, true); return; }
+        /* 找不到对应导航（比如以后的隐藏页），就按名字显示 */
+        for (var j = 0; j < links.length; j++) { links[j].classList.remove('active'); }
+        var nm = d.name || decodeSafe(String(d.ycNav).split('/').pop()).replace(/\.html$/i, '');
+        gbIcon.textContent = d.icon || '🎮';
+        gbName.textContent = nm;
+        document.title = nm ? nm + ' · ' + baseTitle : baseTitle;
+    });
+
+    /* 打开时默认高亮主页 */
+    highlight(findLinkByFile('主页.html') || links[0], false);
+})();
+
 /* ---------- 主题切换 ---------- */
 (function () {
     var KEY = 'yc-theme';
