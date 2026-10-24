@@ -200,6 +200,11 @@
         }
         .sidebar a.active .tag { color: var(--shell-accent); border-color: var(--shell-accent); }
 
+        /* 手机折叠导航专用控件（桌面隐藏） */
+        .nav-toggle { display: none; }
+        .mini-game { display: none; }
+        .nav-backdrop { display: none; }
+
         /* ---------- 内容区 ---------- */
         .content {
             flex: 1 1 auto;
@@ -251,74 +256,178 @@
             display: block;
             background-color: #0b1220;
         }
+        /* 换页时的加载遮罩（覆盖在画面之上，加载完就淡出） */
+        .frame-wrap { position: relative; }
+        .frame-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 13px;
+            letter-spacing: 1px;
+            color: #cfe0f7;
+            background-color: rgba(9, 15, 25, .82);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .18s ease, visibility .18s ease;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .frame-loading.show { opacity: 1; visibility: visible; }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(120, 180, 255, .28);
+            border-top-color: #4f9cf9;
+            border-radius: 50%;
+            animation: yc-spin .75s linear infinite;
+        }
+        @keyframes yc-spin { to { transform: rotate(360deg); } }
 
-        /* ---------- 手机：导航变顶部横向胶囊 ---------- */
+        /* ---------- 手机：折叠式导航 ---------- */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
                 height: 100dvh;
                 overflow: hidden;
             }
+
+            /* 顶部一条很窄的工具条：菜单按钮 + 当前游戏 + 主题 */
             .sidebar {
+                position: relative;
                 width: 100%;
                 flex: 0 0 auto;
+                display: flex;
                 flex-direction: row;
                 align-items: center;
-                gap: 6px;
-                padding: 8px;
-                overflow-x: auto;
-                overflow-y: hidden;
+                gap: 10px;
+                height: 54px;
+                padding: 0 10px;
+                overflow: visible;
                 border-right: none;
                 border-bottom: 1px solid var(--shell-line);
-                -webkit-overflow-scrolling: touch;
+                z-index: 30;
             }
-            .brand { padding: 0 8px 0 2px; border-bottom: none; margin-bottom: 0; flex: 0 0 auto; }
-            .brand-sub { display: none; }
-            .brand-name { font-size: 13px; }
+            .brand { display: none; }
+
+            .nav-toggle {
+                display: inline-flex;
+                flex: 0 0 auto;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                padding: 0;
+                border-radius: 10px;
+                background-color: var(--shell-btn-bg);
+                border: 1px solid var(--shell-btn-border);
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+            .nav-toggle .bars,
+            .nav-toggle .bars::before,
+            .nav-toggle .bars::after {
+                content: "";
+                display: block;
+                width: 16px;
+                height: 2px;
+                border-radius: 2px;
+                background-color: var(--shell-text);
+                transition: transform .22s ease, opacity .18s ease;
+            }
+            .nav-toggle .bars { position: relative; }
+            .nav-toggle .bars::before { position: absolute; left: 0; top: -5px; }
+            .nav-toggle .bars::after { position: absolute; left: 0; top: 5px; }
+            .sidebar.open .nav-toggle .bars { background-color: transparent; }
+            .sidebar.open .nav-toggle .bars::before { transform: translateY(5px) rotate(45deg); }
+            .sidebar.open .nav-toggle .bars::after { transform: translateY(-5px) rotate(-45deg); }
+
+            /* 工具条上的当前游戏名 */
+            .mini-game {
+                display: flex;
+                flex: 1 1 auto;
+                align-items: center;
+                gap: 7px;
+                min-width: 0;
+                font-size: 14px;
+                font-weight: 700;
+                letter-spacing: .5px;
+            }
+            .mini-game .mi-ic { font-size: 15px; line-height: 1; flex: 0 0 auto; }
+            .mini-game .mi-nm {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
             .theme-toggle {
                 flex: 0 0 auto;
-                width: 34px;
-                height: 34px;
+                width: 38px;
+                height: 38px;
                 padding: 0;
                 margin: 0;
-                border-radius: 50%;
-                order: -1;
+                border-radius: 10px;
             }
             .theme-text { display: none; }
-            .nav { flex-direction: row; align-items: center; gap: 6px; }
-            .nav-group {
-                margin: 0;
-                padding: 0 2px 0 6px;
-                font-size: 10px;
-                letter-spacing: 1px;
-                white-space: nowrap;
-                writing-mode: horizontal-tb;
+
+            /* 收起时隐藏菜单，展开时变成下拉面板 */
+            .nav {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                gap: 2px;
+                padding: 10px 10px 14px;
+                background-color: var(--shell-bg);
+                border-bottom: 1px solid var(--shell-line);
+                box-shadow: 0 20px 34px -18px rgba(0, 0, 0, .45);
+                max-height: calc(100dvh - 150px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                z-index: 40;
             }
+            .sidebar.open .nav { display: flex; }
+            .nav-group { margin: 12px 0 6px; }
             .sidebar a {
                 flex: 0 0 auto;
-                gap: 5px;
-                padding: 7px 11px;
-                font-size: 12.5px;
-                border: 1px solid var(--shell-btn-border);
-                background-color: var(--shell-btn-bg);
-                border-radius: 999px;
+                gap: 9px;
+                padding: 11px 12px;
+                font-size: 14px;
+                border-radius: 10px;
             }
-            .sidebar a.active {
-                border-color: var(--shell-accent);
-                box-shadow: 0 0 0 3px var(--shell-active-bg);
+            .sidebar a.active::before { display: block; }
+            .sidebar a .tag { display: inline-block; }
+
+            .nav-backdrop {
+                display: none;
+                position: fixed;
+                inset: 54px 0 0 0;
+                background-color: rgba(8, 14, 24, .38);
+                backdrop-filter: blur(1.5px);
+                z-index: 20;
             }
-            .sidebar a.active::before { display: none; }
-            .sidebar a .tag { display: none; }
+            .nav-backdrop.show { display: block; }
+
             .content { flex: 1 1 auto; min-height: 0; padding: 8px; }
-            .gamebar { padding: 0 2px 8px; gap: 8px; }
-            .gb-name { font-size: 14px; }
-            .gb-label { display: none; }
+            .gamebar { display: none; }          /* 当前游戏名已经显示在工具条上 */
             .frame-wrap { border-radius: 10px; }
-        }
-    </style>
+        }    </style>
 </head>
 <body>
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="展开菜单" aria-expanded="false">
+            <span class="bars" aria-hidden="true"></span>
+        </button>
+        <div class="mini-game">
+            <span class="mi-ic" id="miniIcon" aria-hidden="true">🏠</span>
+            <span class="mi-nm" id="miniName">主页</span>
+        </div>
         <div class="brand">
             <span class="brand-dot" aria-hidden="true"></span>
             <span class="brand-name">叶初小游戏</span>
@@ -370,6 +479,8 @@
         </nav>
     </div>
 
+    <div class="nav-backdrop" id="navBackdrop"></div>
+
     <div class="content">
         <div class="gamebar">
             <span class="gb-ic" id="gbIcon" aria-hidden="true">🏠</span>
@@ -378,6 +489,10 @@
         </div>
         <div class="frame-wrap">
             <iframe name="gameFrame" id="gameFrame" src="proF/主页.html" title="游戏画面"></iframe>
+            <div class="frame-loading" id="frameLoading">
+                <span class="spinner" aria-hidden="true"></span>
+                <span id="frameLoadingText">加载中…</span>
+            </div>
         </div>
     </div>
 
@@ -390,6 +505,15 @@
     var gbName = document.getElementById('gbName');
     var frame = document.getElementById('gameFrame');
     var baseTitle = '叶初小游戏';
+    var miniIcon = document.getElementById('miniIcon');
+    var miniName = document.getElementById('miniName');
+    /* 顶部游戏条 + 手机工具条上的当前游戏名一起更新 */
+    function setBar(icon, name) {
+        gbIcon.textContent = icon;
+        gbName.textContent = name;
+        if (miniIcon) { miniIcon.textContent = icon; }
+        if (miniName) { miniName.textContent = name; }
+    }
 
     function decodeSafe(s) {
         try { return decodeURIComponent(s); } catch (e) { return s; }
@@ -407,14 +531,12 @@
     function highlight(link, updateTitle) {
         for (var i = 0; i < links.length; i++) { links[i].classList.remove('active'); }
         if (!link) {
-            gbIcon.textContent = '🏠';
-            gbName.textContent = '主页';
+            setBar('🏠', '主页');
             document.title = baseTitle;
             return;
         }
         link.classList.add('active');
-        gbIcon.textContent = link.getAttribute('data-icon') || '🎮';
-        gbName.textContent = link.getAttribute('data-name') || link.textContent.trim();
+        setBar(link.getAttribute('data-icon') || '🎮', link.getAttribute('data-name') || link.textContent.trim());
         if (updateTitle !== false) {
             var nm = link.getAttribute('data-name') || '';
             document.title = nm && nm !== '主页' ? nm + ' · ' + baseTitle : baseTitle;
@@ -435,6 +557,7 @@
 
     /* 内嵌页加载完后同步一次（同源时能拿到真实地址，比如从主页点卡片进去） */
     frame.addEventListener('load', function () {
+        hideLoading();
         var file = null;
         try {
             var path = frame.contentWindow.location.pathname || '';
@@ -446,8 +569,7 @@
         else {
             /* 认不出的页面（比如备份页），只显示文件名 */
             for (var j = 0; j < links.length; j++) { links[j].classList.remove('active'); }
-            gbIcon.textContent = '📄';
-            gbName.textContent = decodeURIComponent(file).replace(/\.html$/i, '');
+            setBar('📄', decodeURIComponent(file).replace(/\.html$/i, ''));
             document.title = decodeURIComponent(file).replace(/\.html$/i, '') + ' · ' + baseTitle;
         }
     });
@@ -461,13 +583,105 @@
         /* 找不到对应导航（比如以后的隐藏页），就按名字显示 */
         for (var j = 0; j < links.length; j++) { links[j].classList.remove('active'); }
         var nm = d.name || decodeSafe(String(d.ycNav).split('/').pop()).replace(/\.html$/i, '');
-        gbIcon.textContent = d.icon || '🎮';
-        gbName.textContent = nm;
+        setBar(d.icon || '🎮', nm);
         document.title = nm ? nm + ' · ' + baseTitle : baseTitle;
     });
 
+    /* ---------- 加载遮罩：点导航就先盖上，页面加载完再撤 ---------- */
+    var loading = document.getElementById('frameLoading');
+    var loadingText = document.getElementById('frameLoadingText');
+    var showAt = 0;
+
+    function showLoading(name) {
+        if (!loading) { return; }
+        if (loadingText) { loadingText.textContent = name ? '正在打开 ' + name + '…' : '加载中…'; }
+        showAt = Date.now();
+        loading.classList.add('show');
+    }
+    function hideLoading() {
+        if (!loading) { return; }
+        var wait = Math.max(0, 300 - (Date.now() - showAt));   /* 至少显示 300ms，避免闪一下 */
+        setTimeout(function () { loading.classList.remove('show'); }, wait);
+    }
+
+    for (var k = 0; k < links.length; k++) {
+        (function (link) {
+            link.addEventListener('click', function () {
+                showLoading(link.getAttribute('data-name'));
+            });
+        })(links[k]);
+    }
+
+    /* ---------- 预取：悬停 / 聚焦时立刻拉，空闲时把剩下的全拉进缓存 ---------- */
+    var prefetched = {};
+    function prefetch(href) {
+        if (!href || prefetched[href]) { return; }
+        prefetched[href] = 1;
+        try {
+            var l = document.createElement('link');
+            l.rel = 'prefetch';
+            l.href = href;
+            if (l.as !== undefined) { l.as = 'document'; }
+            document.head.appendChild(l);
+        } catch (e) {
+            try { fetch(href, { cache: 'force-cache', priority: 'low' }); } catch (e2) {}
+        }
+    }
+    for (var m = 0; m < links.length; m++) {
+        (function (link) {
+            var href = link.getAttribute('href');
+            link.addEventListener('mouseenter', function () { prefetch(href); }, { passive: true });
+            link.addEventListener('touchstart', function () { prefetch(href); }, { passive: true });
+            link.addEventListener('focus', function () { prefetch(href); });
+        })(links[m]);
+    }
+    /* 空闲时把其余游戏页也预取好，之后切换基本是瞬开。
+       省流量模式 / 2G 网络下不自动预取，只保留悬停预取。 */
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    var slowNet = !!(conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')));
+    if (!slowNet) {
+        var idle = window.requestIdleCallback || function (fn) { setTimeout(fn, 1200); };
+        idle(function () {
+            for (var i = 0; i < links.length; i++) { prefetch(links[i].getAttribute('href')); }
+        }, { timeout: 3000 });
+    }
+
     /* 打开时默认高亮主页 */
     highlight(findLinkByFile('主页.html') || links[0], false);
+})();
+
+/* ---------- 手机折叠式导航 ---------- */
+(function () {
+    var sidebar = document.getElementById('sidebar');
+    var toggle = document.getElementById('navToggle');
+    var backdrop = document.getElementById('navBackdrop');
+    var nav = document.getElementById('nav');
+    if (!sidebar || !toggle) { return; }
+
+    function setOpen(open) {
+        sidebar.classList.toggle('open', open);
+        if (backdrop) { backdrop.classList.toggle('show', open); }
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    toggle.addEventListener('click', function () {
+        setOpen(!sidebar.classList.contains('open'));
+    });
+    if (backdrop) {
+        backdrop.addEventListener('click', function () { setOpen(false); });
+    }
+    if (nav) {
+        /* 选了游戏就收起菜单 */
+        nav.addEventListener('click', function (e) {
+            var a = e.target.closest ? e.target.closest('a') : null;
+            if (a) { setOpen(false); }
+        });
+    }
+    window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' || e.key === 'Esc') { setOpen(false); }
+    });
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 768) { setOpen(false); }
+    });
 })();
 
 /* ---------- 主题切换 ---------- */
