@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "avatar": {
+    "src": "assets/img/avatar.jpg",
+    "alt": "时光不语的头像"
+  },
+  "favicon": {
+    "src": "assets/img/favicon.svg"
+  },
+  "appleTouchIcon": null,
+  "links": {
+    "github": "https://github.com/VILOTIME",
+    "email": "vilo.time@petalmail.com",
+    "rss": "https://github.com/VILOTIME/vilotime.github.io/commits/main.atom"
+  }
+}
