@@ -4,21 +4,12 @@
   "sites": [
     {
       "id": "blog",
-      "title": "博客",
-      "desc": "技术文章与随想，长期更新。",
-      "href": "",
+      "title": "个人博客",
+      "desc": "随笔与专栏",
+      "href": "https://vilotime.github.io/blogs/",
       "icon": "blog",
       "color": "#6d8cff",
       "tag": "blog"
-    },
-    {
-      "id": "notes",
-      "title": "笔记",
-      "desc": "知识库、读书笔记与零散灵感。",
-      "href": "",
-      "icon": "notes",
-      "color": "#37d6c0",
-      "tag": "notes"
     },
     {
       "id": "games",
@@ -28,33 +19,6 @@
       "icon": "works",
       "color": "#a06bff",
       "tag": "works"
-    },
-    {
-      "id": "tools",
-      "title": "工具箱",
-      "desc": "浏览器里就能跑的小工具合集。",
-      "href": "",
-      "icon": "tools",
-      "color": "#ffb054",
-      "tag": "tools"
-    },
-    {
-      "id": "gallery",
-      "title": "相册",
-      "desc": "生活影像与旅行记录。",
-      "href": "",
-      "icon": "gallery",
-      "color": "#ff78aa",
-      "tag": "gallery"
-    },
-    {
-      "id": "about",
-      "title": "关于",
-      "desc": "更完整的自我介绍与联系渠道。",
-      "href": "",
-      "icon": "about",
-      "color": "#94a3b8",
-      "tag": "about"
     }
   ]
 }
