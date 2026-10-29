@@ -126,7 +126,11 @@ function metaHTML(m) {
   }
 
   lines.push('');
-  lines.push('<meta name="twitter:card" content="' + (m.imageUrl ? 'summary_large_image' : 'summary') + '" />');
+  /* 方图配 summary（方形缩略图），宽图才用 summary_large_image（1.91:1 会被裁） */
+  const square = m.imageWidth && m.imageHeight &&
+    Math.abs(m.imageWidth - m.imageHeight) < 8;
+  const card = !m.imageUrl ? 'summary' : (square ? 'summary' : 'summary_large_image');
+  lines.push('<meta name="twitter:card" content="' + card + '" />');
   lines.push('<meta name="twitter:title" content="' + S.esc(m.title) + '" />');
   if (m.description) {
     lines.push('<meta name="twitter:description" content="' + S.esc(m.description) + '" />');
