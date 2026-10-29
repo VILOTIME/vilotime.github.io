@@ -92,6 +92,32 @@
   observeReveals(document.querySelectorAll('.reveal'));
 
   /* ---------- 分站点卡片：sites.json 现渲染 ---------- */
+  /* 判断「DOM 里的卡片是不是已经等于 json 里的数据」。
+     不能直接比 HTML 字符串：浏览器序列化 SVG 时会把 <path /> 展开成 <path></path>，
+     再加上运行时插入的 is-visible / data-reveal-delay，字符串永远对不上。
+     所以这里比的是每张卡片的实际内容。 */
+  function cardsMatchDom(grid, sites) {
+    var nodes = grid.querySelectorAll('.site');
+    if (nodes.length !== sites.length) { return false; }
+
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var s = sites[i];
+      var title = el.querySelector('.site__title');
+      var desc = el.querySelector('.site__desc');
+      var tag = el.querySelector('.site__tag');
+      var icon = el.querySelector('.site__icon');
+
+      if (!title || title.textContent.trim() !== s.title) { return false; }
+      if ((desc ? desc.textContent.trim() : '') !== (s.desc || '')) { return false; }
+      if ((tag ? tag.textContent.trim() : '') !== (s.tag || '')) { return false; }
+      if ((el.getAttribute('href') || '') !== (s.placeholder ? '#' : s.href)) { return false; }
+      if (el.hasAttribute('data-site') !== !!s.placeholder) { return false; }
+      if (icon && (icon.getAttribute('style') || '').indexOf(s.tint) < 0) { return false; }
+    }
+    return true;
+  }
+
   function renderSitesFromJson() {
     var api = window.SitesData;
     var grid = document.getElementById('siteGrid');
@@ -105,9 +131,22 @@
       .then(function (raw) {
         var ds = api.parse(raw);
         if (!ds.total) { return; }
+
+        /* 静态兜底已经和 json 一致时，一个字都别动。
+           换掉 innerHTML 会让卡片以全新节点从透明重新淡入一次，
+           叠上页面初次加载的入场动画，看起来就是「动画播了两遍」。 */
+        if (cardsMatchDom(grid, ds.sites)) { return; }
+
+        var hadCards = grid.querySelectorAll('.site').length > 0;
         grid.innerHTML = api.gridHTML(ds);
-        // 新插入的卡片要重新挂上入场观察
-        observeReveals(grid.querySelectorAll('.reveal'));
+
+        var added = grid.querySelectorAll('.reveal');
+        if (hadCards) {
+          /* 卡片已经在屏幕上了，只是内容变了：直接显示，不再补一次入场动画 */
+          toArray(added).forEach(function (el) { el.classList.add('is-visible'); });
+        } else {
+          observeReveals(added);
+        }
       })
       .catch(function () {
         /* file:// 直开（CORS）、断网、json 写坏了：都保留 index.html 里的静态兜底 */
