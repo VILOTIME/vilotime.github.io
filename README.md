@@ -92,13 +92,11 @@
 
 ### 关于 RSS
 
-这个站没有文章列表，所以 RSS 默认指向**本仓库的提交记录**（GitHub 自带 Atom 源）：
+这个站没有文章列表，所以 RSS 默认指向**本仓库的提交记录**
 
 ```
 https://github.com/<用户名>/<仓库名>/commits/<分支>.atom
 ```
-
-零维护、内容真实，提交一次就有更新。等以后有了文章页，把 `links.rss` 换成自己的 `feed.xml` 即可。
 
 ### 为什么点了邮件图标没反应？
 
@@ -252,26 +250,6 @@ python -m http.server 8000                      # 最省事的方式，也能用
 
 站点地址如果不是 `https://vilotime.github.io/`（比如仓库名不同、或者是项目页 `/repo/` 子路径），
 改 `meta.url` 一处即可，封面地址会跟着变。
-
-## 部署到 GitHub Pages
-
-仓库名是 `vilotime.github.io`，属于「用户主页」站点：
-
-```powershell
-git init
-git add .
-git commit -m "feat: 个人主页 + sites.json / profile.json 同步流程"
-git branch -M main
-git remote add origin https://github.com/<你的用户名>/vilotime.github.io.git
-git push -u origin main
-```
-
-然后 **Settings → Pages** → Source 选 `Deploy from a branch`，分支 `main`、目录 `/ (root)`，
-保存后访问 `https://<你的用户名>.github.io/`。
-
-`.nojekyll` 是个空文件，但**文件名本身就是内容**：它告诉 GitHub Pages 别跑 Jekyll，
-直接把仓库原样发布。删掉也能上线，只是以后如果加了 `_` 或 `.` 开头的目录/文件，
-Jekyll 会悄悄忽略它们 —— 留着它零成本。
 
 ## 已实现的小细节
 
