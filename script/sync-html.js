@@ -32,7 +32,7 @@ const P = require(path.join(__dirname, 'profile.js'));
 const TARGET = 'index.html';
 const CHECK_ONLY = process.argv.indexOf('--check') >= 0;
 
-const SITE_KEYS = ['id', 'title', 'desc', 'href', 'icon', 'color', 'tag'];
+const SITE_KEYS = ['id', 'title', 'desc', 'href', 'icon', 'color', 'tag', 'sameTab'];
 const IMAGE_KEYS = ['src', 'alt', 'type', 'sizes', 'width', 'height'];
 
 const warnings = [];
@@ -112,6 +112,16 @@ const seenTitles = {};
     warn((s.id || at) + '：没写 color，图标会用默认蓝色');
   } else if (!s.plainColor) {
     warn((s.id || at) + '：color 不是合法 hex（' + JSON.stringify(entry.color) + '），应形如 "#6d8cff"');
+  }
+  if ('sameTab' in entry && typeof entry.sameTab !== 'boolean') {
+    warn((s.id || at) + '：sameTab 应为 true / false（true = 同页跳转，不开新标签）');
+  }
+  if (s.blank && !entry.sameTab) {
+    /* 绝对地址默认开新标签；如果它其实就是本站链接，加 sameTab 更顺手 */
+    const siteRoot = String(pp.meta.url || '').replace(/\/+$/, '');
+    if (siteRoot && s.href.indexOf(siteRoot) === 0) {
+      warn((s.id || at) + '：指向本站自己的地址（' + s.href + '），想同页跳转就把 href 换成相对路径或加 "sameTab": true');
+    }
   }
 
   const titleKey = s.title.toLowerCase();

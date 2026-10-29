@@ -6,9 +6,14 @@
  *   · Node：  script/sync-html.js 里 require 它，生成写进 index.html 的静态兜底。
  * 两边共用同一套模板，所以「脚本生成的」和「浏览器渲染的」永远长得一样。
  *
- * 一份分站点只写 6 个字段：
- *     id  title  desc  href  icon  color  tag
- * id / title / tag 之外全部可省；tint、是否新窗口打开等都由这里算出来。
+ * 一份分站点只写这些字段：
+ *     id  title  desc  href  icon  color  tag  sameTab
+ * 除 id 之外全部可省；tint、是否新窗口打开等都由这里算出来。
+ *
+ * 跳转方式：
+ *   · 相对路径（如 "blogs/"）      → 同页跳转（天然同站）
+ *   · 绝对地址（如 "https://…"）  → 默认新标签页打开
+ *   · 想让绝对地址也同页跳转          → 加 "sameTab": true
  */
 (function (global, factory) {
   'use strict';
@@ -63,6 +68,7 @@
     var id = String(s.id == null ? '' : s.id).trim();
     var href = String(s.href == null ? '' : s.href).trim();
     var iconKey = String(s.icon == null ? '' : s.icon).trim();
+    var absolute = isExternal(href);
 
     return {
       id: id,
@@ -76,7 +82,11 @@
       tint: hexToTint(s.color) || hexToTint(DEFAULT_COLOR),
       plainColor: /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(s.color || '').trim()),
       tag: String(s.tag == null ? '' : s.tag).trim() || id,
-      external: isExternal(href)
+      external: absolute,
+      /* 同页跳转：显式 sameTab: true，或者链接本身就是相对路径（相对路径天然是同站） */
+      sameTab: !absolute || s.sameTab === true,
+      /* 渲染时到底加不加 target="_blank" */
+      blank: absolute && s.sameTab !== true
     };
   }
 
@@ -96,7 +106,7 @@
     var attrs = ['class="site reveal"', 'href="' + esc(site.placeholder ? '#' : site.href) + '"'];
     if (site.placeholder) {
       attrs.push('data-site');
-    } else if (site.external) {
+    } else if (site.blank) {
       attrs.push('target="_blank"');
       attrs.push('rel="noopener noreferrer"');
     }

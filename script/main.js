@@ -113,6 +113,8 @@
       if ((tag ? tag.textContent.trim() : '') !== (s.tag || '')) { return false; }
       if ((el.getAttribute('href') || '') !== (s.placeholder ? '#' : s.href)) { return false; }
       if (el.hasAttribute('data-site') !== !!s.placeholder) { return false; }
+      /* 跳转方式也算内容的一部分：改了 sameTab 也要能反映出来 */
+      if ((el.getAttribute('target') || '') !== (s.blank ? '_blank' : '')) { return false; }
       if (icon && (icon.getAttribute('style') || '').indexOf(s.tint) < 0) { return false; }
     }
     return true;
