@@ -27,9 +27,10 @@
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
 <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
 
-<!-- 网页图标：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
+<!-- 网页图标 + 头像预载：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
 <!-- profile:icons:start -->
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+<link rel="preload" as="image" href="assets/img/avatar-400.jpg" fetchpriority="high" />
 <!-- profile:icons:end -->
 <link rel="stylesheet" href="assets/css/style.css" />
 <!-- 没有 JS 时也要能看到内容（入场动效依赖 JS 添加 is-visible） -->
@@ -63,7 +64,7 @@
       <div class="avatar__ring"></div>
       <!-- 头像：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
       <!-- profile:avatar:start -->
-      <img class="avatar__img" src="assets/img/avatar.jpg" alt="时光不语的头像" width="140" height="140" />
+      <img class="avatar__img" src="assets/img/avatar-400.jpg" alt="时光不语的头像" width="140" height="140" fetchpriority="high" />
       <!-- profile:avatar:end -->
       <span class="avatar__badge" title="在线">open</span>
     </div>

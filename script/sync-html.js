@@ -338,7 +338,7 @@ const REGIONS = [
   { mark: 'sites', label: '分站点卡片', indent: 6, body: () => S.gridHTML(ds) },
   { mark: 'profile:meta', label: '标题与分享卡片', indent: 0, body: () => P.metaHTML(metaView) },
   { mark: 'profile:avatar', label: '头像', indent: 6, body: () => P.avatarHTML(pp) },
-  { mark: 'profile:icons', label: '网页图标', indent: 0, body: () => P.iconsHTML(pp) },
+  { mark: 'profile:icons', label: '网页图标与头像预载', indent: 0, body: () => P.iconsHTML(pp) },
   { mark: 'profile:links', label: '页脚链接', indent: 6, body: () => P.linksHTML(pp) },
   { mark: 'profile:contact', label: '联系我按钮', indent: 6, body: () => P.contactButtonHTML(pp) }
 ];

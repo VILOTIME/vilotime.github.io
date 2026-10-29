@@ -150,12 +150,14 @@ function avatarHTML(p) {
     'src="' + S.esc(p.avatar.src) + '"',
     'alt="' + S.esc(p.avatar.alt) + '"',
     'width="' + S.esc(p.avatar.width || '140') + '"',
-    'height="' + S.esc(p.avatar.height || '140') + '"'
+    'height="' + S.esc(p.avatar.height || '140') + '"',
+    /* 头像是首屏最显眼的一块图，给它最高优先级、别让浏览器排到后面去 */
+    'fetchpriority="high"'
   ];
   return '<img ' + attrs.join(' ') + ' />';
 }
 
-/* 网页图标：favicon + 可选的 iOS 主屏图标 */
+/* 网页图标：favicon + 可选的 iOS 主屏图标 + 头像预载 */
 function iconsHTML(p) {
   const lines = [];
 
@@ -171,6 +173,11 @@ function iconsHTML(p) {
 
   if (p.appleTouchIcon) {
     lines.push('<link rel="apple-touch-icon" href="' + S.esc(p.appleTouchIcon.src) + '" />');
+  }
+
+  /* 头像提前拉：进页面时就不会看到它从上面一行行「刷」出来 */
+  if (p.avatar.src) {
+    lines.push('<link rel="preload" as="image" href="' + S.esc(p.avatar.src) + '" fetchpriority="high" />');
   }
 
   return lines.join('\n');
