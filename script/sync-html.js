@@ -127,6 +127,97 @@ const seenTitles = {};
   });
 });
 
+/* ---------------- 校验：标题 / 描述 / 分享卡片 ---------------- */
+const M = pp.meta;
+const isAbsolute = (u) => /^https?:\/\//i.test(u);
+
+/* 相对路径补成绝对地址：微信不会去猜相对路径，所以 base 不合法时宁可返回空（不输出 og:image） */
+function absoluteUrl(base, rel) {
+  if (isAbsolute(rel)) { return rel; }
+  if (!isAbsolute(base)) { return ''; }
+  return base.replace(/\/+$/, '') + '/' + String(rel).replace(/^\/+/, '');
+}
+
+/* 直接读 PNG 的 IHDR 拿真实宽高，省得换图后写成旧数字 */
+function pngSize(absFile) {
+  try {
+    const buf = fs.readFileSync(absFile);
+    const isPng = buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    if (!isPng) { return null; }
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  } catch (e) {
+    return null;
+  }
+}
+
+if (!M.title) {
+  fail('profile.json → meta.title：必填，否则网页没有标题、收藏夹会显示地址');
+}
+if (!M.description) {
+  warn('profile.json → meta.description：没写，分享卡片会没有描述');
+}
+if (!M.url) {
+  warn('profile.json → meta.url：没写站点地址，og:url 和封面的绝对地址都生成不了');
+} else if (!isAbsolute(M.url)) {
+  warn('profile.json → meta.url：要是完整地址（https://…），当前是 ' + M.url);
+  if (!/\/$/.test(M.url)) { warn('profile.json → meta.url：建议以 / 结尾（' + M.url + '）'); }
+}
+
+/* 封面：本地路径检查存在性，绝对地址则跳过 */
+let imageUrl = '';
+let imageWidth = Number.isFinite(M.imageWidth) ? M.imageWidth : null;
+let imageHeight = Number.isFinite(M.imageHeight) ? M.imageHeight : null;
+
+if (!M.image) {
+  warn('profile.json → meta.image：没写封面，微信收藏 / 分享不会显示缩略图');
+} else if (isAbsolute(M.image)) {
+  imageUrl = M.image;
+} else {
+  const local = path.join(root, M.image);
+  if (!fs.existsSync(local)) {
+    fail('profile.json → meta.image：文件 ' + M.image + ' 不存在');
+  } else {
+    const size = /\.png$/i.test(M.image) ? pngSize(local) : null;
+    if (size) {
+      imageWidth = size.width;
+      imageHeight = size.height;
+      if (Number.isFinite(M.imageWidth) && M.imageWidth !== size.width) {
+        warn('profile.json → meta.imageWidth：写的是 ' + M.imageWidth + '，但图片实际是 ' + size.width + '（已按实际值输出）');
+      }
+      if (Number.isFinite(M.imageHeight) && M.imageHeight !== size.height) {
+        warn('profile.json → meta.imageHeight：写的是 ' + M.imageHeight + '，但图片实际是 ' + size.height + '（已按实际值输出）');
+      }
+    } else if (!imageWidth || !imageHeight) {
+      warn('profile.json → meta.image：读不出图片尺寸（非 PNG 又没写 imageWidth/imageHeight），封面尺寸标签会省略');
+    }
+  }
+  imageUrl = absoluteUrl(M.url, M.image);
+  if (M.image && !imageUrl) {
+    warn('profile.json → meta.image：meta.url 不是完整地址，拼不出绝对路径，这次不输出 og:image（微信会抓不到封面）');
+  }
+}
+
+if (rawProfile.meta && typeof rawProfile.meta === 'object') {
+  Object.keys(rawProfile.meta).forEach((k) => {
+    if (P.META_KEYS.indexOf(k) < 0) {
+      warn('profile.json → meta：多了个没用到的字段 "' + k + '"（只认 ' + P.META_KEYS.join(' / ') + '）');
+    }
+  });
+} else if (rawProfile.meta) {
+  fail('profile.json → meta：应该是一个对象');
+}
+
+const metaView = {
+  title: M.title,
+  description: M.description,
+  siteName: M.siteName,
+  url: M.url,
+  imageUrl: imageUrl,
+  imageAlt: M.imageAlt,
+  imageWidth: imageWidth,
+  imageHeight: imageHeight
+};
+
 /* ---------------- 校验：头像 / 网页图标 ---------------- */
 if (rawProfile.schema !== P.SCHEMA) {
   warn('profile.json：schema 应为 ' + P.SCHEMA + '，当前是 ' + JSON.stringify(rawProfile.schema));
@@ -245,6 +336,7 @@ function replaceRegion(file, mark, body) {
 /* 表驱动：加一类数据只要往这里加一行 */
 const REGIONS = [
   { mark: 'sites', label: '分站点卡片', indent: 6, body: () => S.gridHTML(ds) },
+  { mark: 'profile:meta', label: '标题与分享卡片', indent: 0, body: () => P.metaHTML(metaView) },
   { mark: 'profile:avatar', label: '头像', indent: 6, body: () => P.avatarHTML(pp) },
   { mark: 'profile:icons', label: '网页图标', indent: 0, body: () => P.iconsHTML(pp) },
   { mark: 'profile:links', label: '页脚链接', indent: 6, body: () => P.linksHTML(pp) },
@@ -265,6 +357,12 @@ function describeImage(img, name) {
 }
 
 console.log('profile.json');
+console.log('  · 标题：' + M.title);
+if (metaView.imageUrl) {
+  const dim = (metaView.imageWidth && metaView.imageHeight)
+    ? '（' + metaView.imageWidth + '×' + metaView.imageHeight + '）' : '';
+  console.log('  · 封面：' + metaView.imageUrl + dim);
+}
 console.log(describeImage(pp.avatar, '头像'));
 if (pp.favicon.src) { console.log(describeImage(pp.favicon, '图标')); }
 if (pp.appleTouchIcon) { console.log(describeImage(pp.appleTouchIcon, '主屏图标')); }

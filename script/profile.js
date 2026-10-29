@@ -22,8 +22,9 @@ const ICON_TYPES = {
   '.gif': 'image/gif'
 };
 
-const ALLOWED_KEYS = ['schema', 'avatar', 'favicon', 'appleTouchIcon', 'links'];
+const ALLOWED_KEYS = ['schema', 'meta', 'avatar', 'favicon', 'appleTouchIcon', 'links'];
 const LINK_KEYS = ['github', 'email', 'rss'];
+const META_KEYS = ['title', 'description', 'siteName', 'url', 'image', 'imageAlt', 'imageWidth', 'imageHeight'];
 
 function str(value) {
   return String(value == null ? '' : value).trim();
@@ -66,9 +67,20 @@ function parse(raw) {
   const favicon = imageOf(r.favicon);
   const touch = r.appleTouchIcon ? imageOf(r.appleTouchIcon) : null;
   const rawLinks = r.links && typeof r.links === 'object' ? r.links : {};
+  const rawMeta = r.meta && typeof r.meta === 'object' ? r.meta : {};
 
   return {
     schema: r.schema,
+    meta: {
+      title: str(rawMeta.title),
+      description: str(rawMeta.description),
+      siteName: str(rawMeta.siteName),
+      url: str(rawMeta.url),
+      image: str(rawMeta.image),
+      imageAlt: str(rawMeta.imageAlt),
+      imageWidth: rawMeta.imageWidth == null ? null : Number(rawMeta.imageWidth),
+      imageHeight: rawMeta.imageHeight == null ? null : Number(rawMeta.imageHeight)
+    },
     avatar: avatar,
     favicon: favicon,
     appleTouchIcon: touch && touch.src ? touch : null,
@@ -79,6 +91,51 @@ function parse(raw) {
       rss: str(rawLinks.rss)
     }
   };
+}
+
+/* 标题 / 描述 / 分享收藏卡片：<title> 和 og:* 一次生成，不会出现「标签页新名、收藏夹旧名」
+ * 传进来的 m 已经把 image 解析成绝对地址（imageUrl），并带好了尺寸。 */
+function metaHTML(m) {
+  const lines = [];
+
+  lines.push('<title>' + S.esc(m.title) + '</title>');
+  if (m.description) {
+    lines.push('<meta name="description" content="' + S.esc(m.description) + '" />');
+  }
+
+  lines.push('<meta property="og:type" content="website" />');
+  if (m.siteName) {
+    lines.push('<meta property="og:site_name" content="' + S.esc(m.siteName) + '" />');
+  }
+  lines.push('<meta property="og:title" content="' + S.esc(m.title) + '" />');
+  if (m.description) {
+    lines.push('<meta property="og:description" content="' + S.esc(m.description) + '" />');
+  }
+  if (m.url) {
+    lines.push('<meta property="og:url" content="' + S.esc(m.url) + '" />');
+  }
+  if (m.imageUrl) {
+    lines.push('<meta property="og:image" content="' + S.esc(m.imageUrl) + '" />');
+    if (m.imageWidth) {
+      lines.push('<meta property="og:image:width" content="' + m.imageWidth + '" />');
+    }
+    if (m.imageHeight) {
+      lines.push('<meta property="og:image:height" content="' + m.imageHeight + '" />');
+    }
+    lines.push('<meta property="og:image:alt" content="' + S.esc(m.imageAlt || m.title) + '" />');
+  }
+
+  lines.push('');
+  lines.push('<meta name="twitter:card" content="' + (m.imageUrl ? 'summary_large_image' : 'summary') + '" />');
+  lines.push('<meta name="twitter:title" content="' + S.esc(m.title) + '" />');
+  if (m.description) {
+    lines.push('<meta name="twitter:description" content="' + S.esc(m.description) + '" />');
+  }
+  if (m.imageUrl) {
+    lines.push('<meta name="twitter:image" content="' + S.esc(m.imageUrl) + '" />');
+  }
+
+  return lines.join('\n');
 }
 
 /* 头像：<img class="avatar__img" …>，宽高属性只用于占位不跳动，实际尺寸由 CSS 决定 */
@@ -171,8 +228,10 @@ module.exports = {
   ICON_TYPES: ICON_TYPES,
   ALLOWED_KEYS: ALLOWED_KEYS,
   LINK_KEYS: LINK_KEYS,
+  META_KEYS: META_KEYS,
   extOf: extOf,
   parse: parse,
+  metaHTML: metaHTML,
   avatarHTML: avatarHTML,
   iconsHTML: iconsHTML,
   linksHTML: linksHTML,

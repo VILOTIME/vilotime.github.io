@@ -1,5 +1,12 @@
 {
   "schema": 1,
+  "meta": {
+    "title": "时光不语 · 个人主页",
+    "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
+    "siteName": "时光不语",
+    "url": "https://vilotime.github.io/",
+    "image": "assets/img/og-cover.png"
+  },
   "avatar": {
     "src": "assets/img/avatar.jpg",
     "alt": "时光不语的头像"

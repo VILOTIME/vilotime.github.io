@@ -38,11 +38,18 @@
 页面只加载 `script/sites.js` 和 `script/main.js`；`script/profile.js`、`script/sync-html.js`、`script/dev.js`
 是给 Node 用的，浏览器不会请求它们（放在同一个文件夹只是为了「所有 JS 一处」）。
 
-## 改头像和网页图标：动 `profile.json`
+## 站点信息、头像、图标、链接：都在 `profile.json`
 
 ```json
 {
   "schema": 1,
+  "meta": {
+    "title": "时光不语 · 个人主页",
+    "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
+    "siteName": "时光不语",
+    "url": "https://vilotime.github.io/",
+    "image": "assets/img/og-cover.png"
+  },
   "avatar": {
     "src": "assets/img/avatar.jpg",
     "alt": "时光不语的头像"
@@ -62,6 +69,13 @@
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
+| `meta.title` | ✅ | 网页标题，同时用于浏览器标签页、`og:title`、`twitter:title` |
+| `meta.description` | 建议填 | 页面描述 + `og:description` |
+| `meta.siteName` | 可选 | `og:site_name` |
+| `meta.url` | 建议填 | 站点根地址，把 `meta.image` 拼成绝对地址用 |
+| `meta.image` | 建议填 | 分享 / 收藏封面。写本地路径（自动拼绝对地址并检查文件存在）或直接写 https 地址 |
+| `meta.imageAlt` | 可选 | 封面替代文字，默认用 `meta.title` |
+| `meta.imageWidth` / `imageHeight` | 可选 | 一般不用写：PNG 会读文件头自动取真实尺寸 |
 | `avatar.src` | ✅ | 图片路径，jpg / png / webp / svg 都行；建议正方形 512×512 |
 | `avatar.alt` | 建议填 | 替代文字，不填脚本会提醒 |
 | `avatar.width` / `height` | 可选 | 只用于布局占位，默认 140；显示尺寸由 CSS 决定 |
@@ -74,6 +88,7 @@
 | `links.rss` | 可选 | 页脚 RSS 入口，留空则不显示 |
 
 `links` 里填了哪个就渲染哪个，分隔点自动处理；三个都不填页脚会空着（脚本会提醒）。
+`meta.title` 一处改动就同步到标签页和收藏卡片，不会出现「浏览器是新名、微信收藏夹是旧名」。
 
 ### 关于 RSS
 
@@ -144,6 +159,7 @@ https://github.com/<用户名>/<仓库名>/commits/<分支>.atom
 | 数据 | 写入 `index.html` 的区间 | 为什么这么处理 |
 | --- | --- | --- |
 | `sites.json` | `<!-- sites:start --> … <!-- sites:end -->` | 卡片 = 内容，http 下要能改完刷新即生效，所以运行时也渲染 |
+| `profile.json` | `<!-- profile:meta:start --> … :end -->` | 标题 / 描述 / og 卡片：要一次生成，避免多处不同步 |
 | `profile.json` | `<!-- profile:avatar:start --> … :end -->` | 头像 = 页面铬件，运行时重渲染没意义 |
 | `profile.json` | `<!-- profile:icons:start --> … :end -->` | favicon 换不优雅，只在构建期写 |
 | `profile.json` | `<!-- profile:links:start --> … :end -->` | 页脚 GitHub / Email / RSS |
@@ -182,7 +198,7 @@ python -m http.server 8000                      # 最省事的方式，也能用
 
 | 改什么 | 改哪里 |
 | --- | --- |
-| 昵称 / @handle | `index.html` 的 `.profile__name`、`.profile__handle` |
+| 昵称 / @handle | `index.html` 的 `.profile__name`、`.profile__handle`（这处仍手写，未进 JSON） |
 | 一句话简介 / 正文简介 | `.profile__tagline`、`.profile__bio` |
 | 标签 | `.chips` 里的 `<li class="chip">` |
 | 头像 | `profile.json` 的 `avatar` |
@@ -191,7 +207,45 @@ python -m http.server 8000                      # 最省事的方式，也能用
 | 整体配色 | `style.css` 顶部 `:root` 变量，浅色主题在 `[data-theme="light"]` |
 | 底部署名链接（GitHub / Email / RSS） | `profile.json` 的 `links` |
 | 在线状态角标 | `.avatar__badge`，不想要就删掉这个元素 |
-| 分享卡片 `og:image` | `index.html` 的 meta（目前只有 `og:title` / `og:description`） |
+| 网页标题 / 描述 / 分享封面 | `profile.json` 的 `meta` |
+
+## 分享 / 收藏卡片（微信、QQ 等）
+
+微信收藏和分享读的是页面头部的 `og:*` 标签，**不是 `<title>`** —— 这就是为什么只改 `<title>`
+会出现「浏览器标签页是新名、收藏夹还是旧名」。
+
+所以这两处现在由 `profile.json` 的 `meta` 一并在生成：
+
+```json
+"meta": {
+  "title": "时光不语 · 个人主页",
+  "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
+  "siteName": "时光不语",
+  "url": "https://vilotime.github.io/",
+  "image": "assets/img/og-cover.png"
+}
+```
+
+同步后会生成 `<!-- profile:meta:start -->` 区间里的内容：`<title>`、`meta description`、
+`og:type / og:site_name / og:title / og:description / og:url / og:image(+width/height/alt)`、
+以及一套 `twitter:*`。
+
+关于封面 `meta.image`：
+
+- 写**本地路径**（如 `assets/img/og-cover.png`）时，脚本会用 `meta.url` 拼成绝对地址、
+  并检查文件真的存在；PNG 还会读文件头自动填 `og:image:width/height`，换图不用改数字。
+- 也可以直接写 https 地址（外链图片），此时不做本地检查。
+- `meta.url` 不是完整地址时，**不会输出 `og:image`**（微信抓不到相对路径，宁可不出也不要出错的）。
+
+三个注意点：
+
+1. **必须是绝对地址**（带 `https://域名/`），微信不会去猜相对路径；
+2. 图片实际尺寸建议就是 **1200×630**，尺寸不符时部分客户端会裁切；
+3. 微信对 `og` 信息有很强的缓存，改完可能要多刷几次、或换个链接（比如加 `?v=2`）才看到新封面，
+   已经收藏过的条目通常得取消收藏再收一次。
+
+站点地址如果不是 `https://vilotime.github.io/`（比如仓库名不同、或者是项目页 `/repo/` 子路径），
+改 `meta.url` 一处即可，封面地址会跟着变。
 
 ## 部署到 GitHub Pages
 
