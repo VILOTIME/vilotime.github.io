@@ -7,7 +7,7 @@
 | 数据文件 | 管什么 | 同步方式 |
 | --- | --- | --- |
 | `sites.json` | 分站点卡片 | 运行时 fetch 现渲染 + 静态兜底 |
-| `profile.json` | 头像、网页图标 | 构建期写进 HTML |
+| `profile.json` | 站点信息、头像、图标、封面 | 构建期写进 HTML |
 
 ## 目录结构
 
@@ -15,22 +15,30 @@
 .
 ├── index.html                # 页面骨架（带标记的区间都是脚本生成的，别手改）
 ├── sites.json                # ★ 分站点清单
-├── profile.json              # ★ 头像 / 网页图标
+├── profile.json              # ★ 站点信息 / 头像 / 图标 / 链接
+├── favicon.ico               # ★ 根目录图标（搜索引擎只认这个路径）
 ├── script/                   # ★ 所有 JS（页面脚本 + 同步工具）
 │   ├── sites.js              # 卡片渲染器（浏览器和 Node 共用同一套模板）
 │   ├── main.js               # 主题切换、拉 json 渲染卡片、入场动效、占位提示
-│   ├── profile.js            # 头像 / 图标的 HTML 渲染器（构建期专用，页面不引用）
+│   ├── profile.js            # 头像 / 图标 / 分享卡片的 HTML 渲染器（构建期专用）
 │   ├── sync-html.js          # 把两个 json 同步进 index.html（--check 只检查）
 │   └── dev.js                # 本地预览服务器 + 保存 json 自动同步
 ├── assets/
 │   ├── css/style.css         # 全部样式，顶部是配色变量
 │   └── img/
-│       ├── avatar.jpg        # 头像
+│       ├── avatar-400.jpg    # 页面头像（400×400）
+│       ├── avatar.jpg        # 头像原图（816×816，页面不引用）
 │       ├── avatar.svg        # 头像占位图（备用）
-│       └── favicon.svg       # 网页图标
-├── tools/                    # 只剩 Windows 入口脚本
+│       ├── favicon.svg       # 矢量图标（现代浏览器用）
+│       ├── icon-16/32/192/512.png   # 多尺寸 PNG 图标
+│       ├── apple-touch-icon.png     # iOS 主屏图标
+│       └── og-cover.png      # 分享 / 收藏封面（800×800）
+├── docs/
+│   └── cover-and-icons.md    # ★ 封面与图标的完整说明
+├── tools/
 │   ├── sync.ps1              # 一键同步（校验 + 调 script/sync-html.js + 可选起预览）
-│   └── sync.cmd              # 双击运行 sync.ps1 的入口
+│   ├── sync.cmd              # 双击运行 sync.ps1 的入口
+│   └── make-icons.ps1        # 生成整套图标（favicon.ico / PNG / apple-touch-icon）
 ├── .nojekyll                 # 让 GitHub Pages 跳过 Jekyll 处理
 └── README.md
 ```
@@ -38,11 +46,14 @@
 页面只加载 `script/sites.js` 和 `script/main.js`；`script/profile.js`、`script/sync-html.js`、`script/dev.js`
 是给 Node 用的，浏览器不会请求它们（放在同一个文件夹只是为了「所有 JS 一处」）。
 
+> 图标和封面的来龙去脉（三种「封面」的区别、为什么 Bing 会显示 GitHub 图标、怎么让它更新）
+> 单独写在 **[docs/cover-and-icons.md](docs/cover-and-icons.md)** 里。
+
 ## 站点信息、头像、图标、链接：都在 `profile.json`
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "meta": {
     "title": "时光不语 · 个人主页",
     "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
@@ -51,14 +62,20 @@
     "image": "assets/img/og-cover.png"
   },
   "avatar": {
-    "src": "assets/img/avatar.jpg",
+    "src": "assets/img/avatar-400.jpg",
     "alt": "时光不语的头像"
   },
-  "favicon": {
-    "src": "assets/img/favicon.png",
-    "sizes": "32x32"
+  "icons": {
+    "ico": "favicon.ico",
+    "svg": "assets/img/favicon.svg",
+    "png": [
+      { "src": "assets/img/icon-16.png",  "sizes": "16x16" },
+      { "src": "assets/img/icon-32.png",  "sizes": "32x32" },
+      { "src": "assets/img/icon-192.png", "sizes": "192x192" },
+      { "src": "assets/img/icon-512.png", "sizes": "512x512" }
+    ],
+    "appleTouch": { "src": "assets/img/apple-touch-icon.png", "sizes": "180x180" }
   },
-  "appleTouchIcon": null,
   "links": {
     "github": "https://github.com/VILOTIME",
     "email": "vilo.time@petalmail.com",
@@ -79,16 +96,26 @@
 | `avatar.src` | ✅ | 图片路径，jpg / png / webp / svg 都行；**正方形 400×400 左右最合适**（见下） |
 | `avatar.alt` | 建议填 | 替代文字，不填脚本会提醒 |
 | `avatar.width` / `height` | 可选 | 只用于布局占位，默认 140；显示尺寸由 CSS 决定 |
-| `favicon.src` | 建议填 | 网页图标；不填就不输出图标标签 |
-| `favicon.type` | 可选 | 一般不用写，脚本按扩展名自动推断 |
-| `favicon.sizes` | 可选 | 例如 `32x32`（PNG/ICO 才需要，SVG 不用写） |
-| `appleTouchIcon` | 可选 | 加 iOS 主屏图标，填 `{ "src": "图片路径" }`；不要就写 `null` |
+| `icons.ico` | **强烈建议** | `.ico` 放在仓库根目录（`favicon.ico`）。**搜索引擎只认这个**，缺了会显示 github.io 的默认图标 |
+| `icons.svg` | 可选 | 现代浏览器首选，矢量最清晰；但搜索引擎不认 SVG |
+| `icons.png` | **强烈建议** | 多尺寸 PNG 数组，每项 `{ "src": …, "sizes": "32x32" }` |
+| `icons.appleTouch` | 可选 | iOS 主屏图标，一般 180×180 |
 | `links.github` | 可选 | 页脚 GitHub 入口，留空则不显示 |
 | `links.email` | 可选 | 页脚 Email + 头部「联系我」按钮，写 `a@b.com` 即可（也接受 `mailto:` 前缀） |
 | `links.rss` | 可选 | 页脚 RSS 入口，留空则不显示 |
 
 `links` 里填了哪个就渲染哪个，分隔点自动处理；三个都不填页脚会空着（脚本会提醒）。
 `meta.title` 一处改动就同步到标签页和收藏卡片，不会出现「浏览器是新名、微信收藏夹是旧名」。
+
+### 图标用脚本生成
+
+```powershell
+.\tools\make-icons.ps1                 # 渐变底 + 白色 V
+.\tools\make-icons.ps1 -Design avatar  # 用头像照片做图标
+```
+
+一次生成 `favicon.ico`（16/32/48 打包）+ `icon-16/32/192/512.png` + `apple-touch-icon.png`，并回读校验。
+细节和排查方法见 [docs/cover-and-icons.md](docs/cover-and-icons.md)。
 
 ### 头像该做多大
 
@@ -182,7 +209,7 @@ https://github.com/<用户名>/<仓库名>/commits/<分支>.atom
 | `sites.json` | `<!-- sites:start --> … <!-- sites:end -->` | 卡片 = 内容，http 下要能改完刷新即生效，所以运行时也渲染 |
 | `profile.json` | `<!-- profile:meta:start --> … :end -->` | 标题 / 描述 / og 卡片：要一次生成，避免多处不同步 |
 | `profile.json` | `<!-- profile:avatar:start --> … :end -->` | 头像 = 页面铬件，运行时重渲染没意义 |
-| `profile.json` | `<!-- profile:icons:start --> … :end -->` | favicon 换不优雅，只在构建期写 |
+| `profile.json` | `<!-- profile:icons:start --> … :end -->` | 图标与头像预载，换不优雅，只在构建期写 |
 | `profile.json` | `<!-- profile:links:start --> … :end -->` | 页脚 GitHub / Email / RSS |
 | `profile.json` | `<!-- profile:contact:start --> … :end -->` | 头部「联系我」按钮（复用 `links.email`） |
 
@@ -223,7 +250,7 @@ python -m http.server 8000                      # 最省事的方式，也能用
 | 一句话简介 / 正文简介 | `.profile__tagline`、`.profile__bio` |
 | 标签 | `.chips` 里的 `<li class="chip">` |
 | 头像 | `profile.json` 的 `avatar` |
-| 网页图标 | `profile.json` 的 `favicon` / `appleTouchIcon` |
+| 网页图标、分享封面 | `profile.json` 的 `icons` / `meta.image`（详见 [docs/cover-and-icons.md](docs/cover-and-icons.md)） |
 | 分站点 | `sites.json`（见上） |
 | 整体配色 | `style.css` 顶部 `:root` 变量，浅色主题在 `[data-theme="light"]` |
 | 底部署名链接（GitHub / Email / RSS） | `profile.json` 的 `links` |

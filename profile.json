@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "meta": {
     "title": "时光不语 · 个人主页",
     "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
@@ -11,10 +11,17 @@
     "src": "assets/img/avatar-400.jpg",
     "alt": "时光不语的头像"
   },
-  "favicon": {
-    "src": "assets/img/favicon.svg"
+  "icons": {
+    "ico": "favicon.ico",
+    "svg": "assets/img/favicon.svg",
+    "png": [
+      { "src": "assets/img/icon-16.png", "sizes": "16x16" },
+      { "src": "assets/img/icon-32.png", "sizes": "32x32" },
+      { "src": "assets/img/icon-192.png", "sizes": "192x192" },
+      { "src": "assets/img/icon-512.png", "sizes": "512x512" }
+    ],
+    "appleTouch": { "src": "assets/img/apple-touch-icon.png", "sizes": "180x180" }
   },
-  "appleTouchIcon": null,
   "links": {
     "github": "https://github.com/VILOTIME",
     "email": "vilo.time@petalmail.com",

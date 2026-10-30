@@ -33,7 +33,6 @@ const TARGET = 'index.html';
 const CHECK_ONLY = process.argv.indexOf('--check') >= 0;
 
 const SITE_KEYS = ['id', 'title', 'desc', 'href', 'icon', 'color', 'tag', 'sameTab'];
-const IMAGE_KEYS = ['src', 'alt', 'type', 'sizes', 'width', 'height'];
 
 const warnings = [];
 const errors = [];
@@ -233,55 +232,137 @@ if (rawProfile.schema !== P.SCHEMA) {
   warn('profile.json：schema 应为 ' + P.SCHEMA + '，当前是 ' + JSON.stringify(rawProfile.schema));
 }
 
-function validateImage(img, at, required) {
-  if (!img.src) {
+/* 通用：相对路径的图片来源检查（头像用） */
+function checkImagePath(src, at, required) {
+  if (!src) {
     if (required) {
-      fail(at + '：缺少 src（图片路径，例如 "assets/img/avatar.svg"）');
+      fail(at + '：缺少 src（图片路径，例如 "assets/img/avatar-400.jpg"）');
     } else {
       warn(at + '：没有配置，对应的标签不会输出');
     }
-    return;
+    return false;
   }
-  if (/^[\\/]/.test(img.src) && !/^\/\//.test(img.src)) {
-    warn(at + '：src 别以 / 开头（' + img.src + '），部署到 GitHub Pages 子路径下会 404');
+  if (/^[\\/]/.test(src) && !/^\/\//.test(src)) {
+    warn(at + '：src 别以 / 开头（' + src + '），部署到 GitHub Pages 子路径下会 404');
   }
-  if (/\\/.test(img.src)) {
-    warn(at + '：路径里的反斜杠要改成正斜杠（' + img.src + '）');
+  if (/\\/.test(src)) {
+    warn(at + '：路径里的反斜杠要改成正斜杠（' + src + '）');
   }
-  if (!img.typeKnown) {
-    warn(at + '：认不出扩展名（' + (img.ext || '无扩展名') + '），type 会写成 "' + img.type + '"');
+  if (/^https?:\/\//i.test(src)) {
+    /* 外链图片：不检查本地文件 */
+    return true;
   }
-  if (!fs.existsSync(path.join(root, img.src))) {
-    fail(at + '：文件 ' + img.src + ' 不存在');
+  if (!fs.existsSync(path.join(root, src))) {
+    fail(at + '：文件 ' + src + ' 不存在');
+    return false;
   }
+  return true;
 }
 
-validateImage(pp.avatar, 'profile.json → avatar', true);
-validateImage(pp.favicon, 'profile.json → favicon', false);
-if (pp.appleTouchIcon) {
-  validateImage(pp.appleTouchIcon, 'profile.json → appleTouchIcon', false);
-}
+/* ---------------- 校验：头像 ---------------- */
+const AV = pp.avatar;
 
-if (pp.avatar.src && !pp.avatar.alt) {
+checkImagePath(AV.src, 'profile.json → avatar', true);
+if (AV.src && !AV.alt) {
   warn('profile.json → avatar：没写 alt，屏幕阅读器只会念「图片」');
 }
-if (pp.favicon.sizes && pp.favicon.ext === '.svg') {
-  warn('profile.json → favicon：SVG 图标写 sizes 意义不大，可以去掉');
+if (AV.src && !/\.(svg|png|jpe?g|webp|gif)$/i.test(AV.src)) {
+  warn('profile.json → avatar：扩展名不是常见图片格式（' + AV.src + '）');
 }
 
+/* ---------------- 校验：站点图标 ---------------- */
+const I = pp.icons;
+const declaredPngSizes = {};
+
+/* ICO：搜索引擎和老浏览器只认这个，缺了就会退回托管域名的图标 */
+if (!I.ico) {
+  warn('profile.json → icons.ico：没有配置 .ico 图标。Bing / 老浏览器只认 favicon.ico，' +
+    '缺了会显示托管域名（github.io）的默认图标');
+} else if (checkImagePath(I.ico.src, 'profile.json → icons.ico', true)) {
+  const icoAbs = path.join(root, I.ico.src);
+  try {
+    const head = fs.readFileSync(icoAbs).subarray(0, 4);
+    const isIco = head[0] === 0 && head[1] === 0 && head[2] === 1 && head[3] === 0;
+    if (!isIco) {
+      fail('profile.json → icons.ico：' + I.ico.src + ' 不是真正的 ICO 文件（可以跑 tools/make-icons.ps1 重新生成）');
+    }
+  } catch (e) {
+    fail('profile.json → icons.ico：读不了 ' + I.ico.src);
+  }
+}
+
+if (I.svg) {
+  checkImagePath(I.svg.src, 'profile.json → icons.svg', false);
+  if (!/\.svg$/i.test(I.svg.src)) {
+    warn('profile.json → icons.svg：这个位置应放 .svg 文件（当前是 ' + I.svg.src + '）');
+  }
+}
+
+if (!I.png.length) {
+  warn('profile.json → icons.png：没有任何 PNG 尺寸，Google / Bing 抓缩略图时挑不到合适的');
+}
+I.png.forEach((item, i) => {
+  const at = 'profile.json → icons.png[' + i + ']';
+  if (!checkImagePath(item.src, at, true)) { return; }
+  if (!/\.png$/i.test(item.src)) {
+    warn(at + '：这个位置应放 .png 文件（当前是 ' + item.src + '）');
+  }
+  const size = pngSize(path.join(root, item.src));
+  if (size) {
+    const actual = size.width + 'x' + size.height;
+    if (!item.sizes) {
+      warn(at + '：没写 sizes，实际是 ' + actual + '（建议补上）');
+      declaredPngSizes[item.src] = actual;
+    } else if (item.sizes !== actual) {
+      warn(at + '：sizes 写的是 ' + item.sizes + '，但图片实际是 ' + actual + '（已按实际值输出）');
+    } else {
+      declaredPngSizes[item.src] = actual;
+    }
+  } else if (!item.sizes) {
+    warn(at + '：读不出图片尺寸，也没写 sizes，浏览器可能挑错尺寸');
+  }
+  if (item.sizes && !/^\d+x\d+$/.test(item.sizes)) {
+    warn(at + '：sizes 应写成 "32x32" 这种形式（当前是 ' + item.sizes + '）');
+  }
+});
+
+if (I.appleTouch) {
+  checkImagePath(I.appleTouch.src, 'profile.json → icons.appleTouch', false);
+  if (!I.appleTouch.sizes) {
+    warn('profile.json → icons.appleTouch：没写 sizes，默认按 180x180 输出');
+  }
+}
+
+/* sizes 一律用图片实测值，避免 JSON 里写了旧数字 */
+pp.icons.png.forEach((item) => {
+  if (declaredPngSizes[item.src]) { item.sizes = declaredPngSizes[item.src]; }
+});
+
+/* 字段名检查 */
 Object.keys(rawProfile).forEach((k) => {
+  if (P.LEGACY_ICON_KEYS.indexOf(k) >= 0) {
+    fail('profile.json：顶层字段 "' + k + '" 已经合并进 icons（现在写 icons.ico / icons.svg / icons.png / icons.appleTouch）');
+    return;
+  }
   if (P.ALLOWED_KEYS.indexOf(k) < 0) {
     warn('profile.json：多了个没用到的字段 "' + k + '"（只认 ' + P.ALLOWED_KEYS.join(' / ') + '）');
   }
 });
-['avatar', 'favicon', 'appleTouchIcon'].forEach((k) => {
-  const v = rawProfile[k];
-  if (!v || typeof v !== 'object') { return; }
-  Object.keys(v).forEach((ik) => {
-    if (IMAGE_KEYS.indexOf(ik) < 0) {
-      warn('profile.json → ' + k + '：多了个没用到的字段 "' + ik + '"（只认 ' + IMAGE_KEYS.join(' / ') + '）');
+
+if (rawProfile.icons && typeof rawProfile.icons === 'object') {
+  Object.keys(rawProfile.icons).forEach((k) => {
+    if (P.ICON_KEYS.indexOf(k) < 0) {
+      warn('profile.json → icons：多了个没用到的字段 "' + k + '"（只认 ' + P.ICON_KEYS.join(' / ') + '）');
     }
   });
+} else if ('icons' in rawProfile) {
+  fail('profile.json → icons：应该是一个对象');
+}
+
+Object.keys(rawProfile.avatar || {}).forEach((k) => {
+  if (['src', 'alt', 'width', 'height'].indexOf(k) < 0) {
+    warn('profile.json → avatar：多了个没用到的字段 "' + k + '"（只认 src / alt / width / height）');
+  }
 });
 
 /* ---------------- 校验：页脚链接 ---------------- */
@@ -361,11 +442,6 @@ const results = REGIONS.map((r) => {
 });
 
 /* ---------------- 输出 ---------------- */
-function describeImage(img, name) {
-  const size = img.sizes ? '，' + img.sizes : '';
-  return '  · ' + name + '：' + img.src + '（' + img.type + size + '）';
-}
-
 console.log('profile.json');
 console.log('  · 标题：' + M.title);
 if (metaView.imageUrl) {
@@ -373,9 +449,15 @@ if (metaView.imageUrl) {
     ? '（' + metaView.imageWidth + '×' + metaView.imageHeight + '）' : '';
   console.log('  · 封面：' + metaView.imageUrl + dim);
 }
-console.log(describeImage(pp.avatar, '头像'));
-if (pp.favicon.src) { console.log(describeImage(pp.favicon, '图标')); }
-if (pp.appleTouchIcon) { console.log(describeImage(pp.appleTouchIcon, '主屏图标')); }
+console.log('  · 头像：' + AV.src);
+if (I.ico) { console.log('  · 图标 .ico：' + I.ico.src + '（搜索引擎 / 老浏览器用）'); }
+if (I.svg) { console.log('  · 图标 .svg：' + I.svg.src); }
+if (pp.icons.png.length) {
+  console.log('  · 图标 .png：' + pp.icons.png.map((x) => x.sizes || '?').join(' / '));
+}
+if (I.appleTouch) {
+  console.log('  · 主屏图标：' + I.appleTouch.src + '（' + (I.appleTouch.sizes || '180x180') + '）');
+}
 if (pp.links.github) { console.log('  · GitHub：' + pp.links.github); }
 if (pp.links.email) { console.log('  · Email：' + pp.links.email); }
 if (pp.links.rss) { console.log('  · RSS：' + pp.links.rss); }

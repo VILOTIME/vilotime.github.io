@@ -1,7 +1,7 @@
-/* 头像 / 网页图标的渲染器（数据源：profile.json）
+/* 头像 / 图标 / 分享封面的渲染器（数据源：profile.json）
  *
  * 只给构建期用：script/sync-html.js 把它生成的 HTML 写进 index.html 的标记区间。
- * 浏览器不需要它 —— 头像和 favicon 属于「页面铬件」，改完跑一次同步、刷新页面即可，
+ * 浏览器不需要它 —— 这些都属于「页面铬件」，改完跑一次同步、刷新页面即可，
  * 没必要在运行时再渲染一遍（也没法优雅地换 favicon）。
  * 所以页面里没有 <script> 引用它，只有 Node 侧 require。
  */
@@ -9,65 +9,37 @@
 
 const S = require('./sites.js');
 
-const SCHEMA = 1;
+const SCHEMA = 2;
 
-/* 扩展名 → MIME，写扩展名就能自动推出 type，json 里不用重复填 */
-const ICON_TYPES = {
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.gif': 'image/gif'
-};
-
-const ALLOWED_KEYS = ['schema', 'meta', 'avatar', 'favicon', 'appleTouchIcon', 'links'];
+const ALLOWED_KEYS = ['schema', 'meta', 'avatar', 'icons', 'links'];
 const LINK_KEYS = ['github', 'email', 'rss'];
+const ICON_KEYS = ['ico', 'svg', 'png', 'appleTouch'];
+/* 这几个 key 还认，但已经合并进 icons，留着只是为了给出迁移提示 */
+const LEGACY_ICON_KEYS = ['favicon', 'appleTouchIcon'];
 const META_KEYS = ['title', 'description', 'siteName', 'url', 'image', 'imageAlt', 'imageWidth', 'imageHeight'];
 
 function str(value) {
   return String(value == null ? '' : value).trim();
 }
 
-function extOf(src) {
-  const m = /\.[a-z0-9]+$/i.exec(String(src || '').trim());
-  return m ? m[0].toLowerCase() : '';
-}
-
-function typeOf(src, override) {
-  const given = String(override == null ? '' : override).trim();
-  if (given) {
-    return { type: given, ok: Object.keys(ICON_TYPES).some((k) => ICON_TYPES[k] === given) };
-  }
-  const t = ICON_TYPES[extOf(src)];
-  return { type: t || '', ok: !!t };
-}
-
-function imageOf(value) {
-  const v = value && typeof value === 'object' ? value : {};
-  const src = String(v.src == null ? '' : v.src).trim();
-  const meta = typeOf(src, v.type);
-  return {
-    src: src,
-    exists: !!src,
-    ext: extOf(src),
-    type: meta.type,
-    typeKnown: meta.ok,
-    sizes: String(v.sizes == null ? '' : v.sizes).trim(),
-    alt: String(v.alt == null ? '' : v.alt).trim(),
-    width: String(v.width == null ? '' : v.width).trim(),
-    height: String(v.height == null ? '' : v.height).trim()
-  };
+/* 把 "assets/img/icon-32.png" 或 { src, sizes } 统一成对象 */
+function iconEntry(value) {
+  if (value == null) { return null; }
+  const v = typeof value === 'object' ? value : { src: value };
+  const src = str(v.src);
+  if (!src) { return null; }
+  return { src: src, sizes: str(v.sizes) };
 }
 
 function parse(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
-  const avatar = imageOf(r.avatar);
-  const favicon = imageOf(r.favicon);
-  const touch = r.appleTouchIcon ? imageOf(r.appleTouchIcon) : null;
+  const rawAvatar = r.avatar && typeof r.avatar === 'object' ? r.avatar : {};
+  const rawIcons = r.icons && typeof r.icons === 'object' ? r.icons : {};
   const rawLinks = r.links && typeof r.links === 'object' ? r.links : {};
   const rawMeta = r.meta && typeof r.meta === 'object' ? r.meta : {};
+
+  const pngList = Array.isArray(rawIcons.png) ? rawIcons.png : [];
+  const png = pngList.map(iconEntry).filter(Boolean);
 
   return {
     schema: r.schema,
@@ -81,9 +53,19 @@ function parse(raw) {
       imageWidth: rawMeta.imageWidth == null ? null : Number(rawMeta.imageWidth),
       imageHeight: rawMeta.imageHeight == null ? null : Number(rawMeta.imageHeight)
     },
-    avatar: avatar,
-    favicon: favicon,
-    appleTouchIcon: touch && touch.src ? touch : null,
+    avatar: {
+      src: str(rawAvatar.src),
+      alt: str(rawAvatar.alt),
+      width: str(rawAvatar.width),
+      height: str(rawAvatar.height)
+    },
+    /* 站点图标：ico（老浏览器 / 搜索引擎）+ svg（现代浏览器）+ png 多尺寸 + iOS 主屏 */
+    icons: {
+      ico: iconEntry(rawIcons.ico),
+      svg: iconEntry(rawIcons.svg),
+      png: png,
+      appleTouch: iconEntry(rawIcons.appleTouch)
+    },
     links: {
       github: str(rawLinks.github),
       /* 允许直接写 mailto:a@b.com，这里统一去掉前缀，渲染时再加回来 */
@@ -157,22 +139,32 @@ function avatarHTML(p) {
   return '<img ' + attrs.join(' ') + ' />';
 }
 
-/* 网页图标：favicon + 可选的 iOS 主屏图标 + 头像预载 */
+/* 站点图标 + 头像预载（都在 <head> 里）
+ * 顺序有讲究：.ico 放最前兜底（老浏览器和搜索引擎只认它），
+ * 然后 svg（现代浏览器最清晰），最后逐尺寸 png（Google/Bing 抓缩略图会看 sizes）。 */
 function iconsHTML(p) {
   const lines = [];
+  const I = p.icons;
 
-  if (p.favicon.src) {
-    const attrs = [
-      'rel="icon"',
-      'href="' + S.esc(p.favicon.src) + '"',
-      'type="' + S.esc(p.favicon.type) + '"'
-    ];
-    if (p.favicon.sizes) { attrs.push('sizes="' + S.esc(p.favicon.sizes) + '"'); }
-    lines.push('<link ' + attrs.join(' ') + ' />');
+  if (I.ico) {
+    /* sizes="any"：.ico 内部已经打包了多个尺寸 */
+    lines.push('<link rel="icon" href="' + S.esc(I.ico.src) + '" sizes="any" />');
   }
 
-  if (p.appleTouchIcon) {
-    lines.push('<link rel="apple-touch-icon" href="' + S.esc(p.appleTouchIcon.src) + '" />');
+  if (I.svg) {
+    lines.push('<link rel="icon" href="' + S.esc(I.svg.src) + '" type="image/svg+xml" />');
+  }
+
+  I.png.forEach((item) => {
+    const attrs = ['rel="icon"', 'href="' + S.esc(item.src) + '"', 'type="image/png"'];
+    if (item.sizes) { attrs.push('sizes="' + S.esc(item.sizes) + '"'); }
+    lines.push('<link ' + attrs.join(' ') + ' />');
+  });
+
+  if (I.appleTouch) {
+    const attrs = ['rel="apple-touch-icon"', 'href="' + S.esc(I.appleTouch.src) + '"'];
+    attrs.push('sizes="' + S.esc(I.appleTouch.sizes || '180x180') + '"');
+    lines.push('<link ' + attrs.join(' ') + ' />');
   }
 
   /* 头像提前拉：进页面时就不会看到它从上面一行行「刷」出来 */
@@ -236,11 +228,11 @@ function contactButtonHTML(p) {
 
 module.exports = {
   SCHEMA: SCHEMA,
-  ICON_TYPES: ICON_TYPES,
   ALLOWED_KEYS: ALLOWED_KEYS,
   LINK_KEYS: LINK_KEYS,
+  ICON_KEYS: ICON_KEYS,
+  LEGACY_ICON_KEYS: LEGACY_ICON_KEYS,
   META_KEYS: META_KEYS,
-  extOf: extOf,
   parse: parse,
   metaHTML: metaHTML,
   avatarHTML: avatarHTML,
