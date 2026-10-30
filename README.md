@@ -34,7 +34,7 @@
 │       ├── apple-touch-icon.png     # iOS 主屏图标
 │       └── og-cover.png      # 分享 / 收藏封面（800×800）
 ├── docs/
-│   └── cover-and-icons.md    # ★ 封面与图标的完整说明
+│   └── cover-and-icons.md    # ★ 封面与图标的通用指南（附录才是本项目配置）
 ├── tools/
 │   ├── sync.ps1              # 一键同步（校验 + 调 script/sync-html.js + 可选起预览）
 │   ├── sync.cmd              # 双击运行 sync.ps1 的入口
@@ -46,8 +46,9 @@
 页面只加载 `script/sites.js` 和 `script/main.js`；`script/profile.js`、`script/sync-html.js`、`script/dev.js`
 是给 Node 用的，浏览器不会请求它们（放在同一个文件夹只是为了「所有 JS 一处」）。
 
-> 图标和封面的来龙去脉（三种「封面」的区别、为什么 Bing 会显示 GitHub 图标、怎么让它更新）
-> 单独写在 **[docs/cover-and-icons.md](docs/cover-and-icons.md)** 里。
+> 图标和封面有一套通用做法（三种「封面」的区别、为什么 Bing 会显示 GitHub 图标、
+> 怎么让它更新），写在 **[docs/cover-and-icons.md](docs/cover-and-icons.md)** 里——
+> 主体部分是**任何静态站点都能照做**的通用指南，文末附录才是本项目的具体配置。
 
 ## 站点信息、头像、图标、链接：都在 `profile.json`
 
