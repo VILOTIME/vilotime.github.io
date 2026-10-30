@@ -55,7 +55,7 @@
 {
   "schema": 2,
   "meta": {
-    "title": "时光不语 · 个人主页",
+    "title": "时光不语 · 主页",
     "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
     "siteName": "时光不语",
     "url": "https://vilotime.github.io/",
@@ -266,7 +266,7 @@ python -m http.server 8000                      # 最省事的方式，也能用
 
 ```json
 "meta": {
-  "title": "时光不语 · 个人主页",
+  "title": "时光不语 · 主页",
   "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
   "siteName": "时光不语",
   "url": "https://vilotime.github.io/",

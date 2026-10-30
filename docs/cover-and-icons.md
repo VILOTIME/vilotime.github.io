@@ -83,7 +83,7 @@
 
 ```json
 "meta": {
-  "title": "时光不语 · 个人主页",
+  "title": "时光不语 · 主页",
   "description": "时光不语 的个人主页 —— 头像、简介，以及各个分站点的入口。",
   "siteName": "时光不语",
   "url": "https://vilotime.github.io/",
@@ -164,7 +164,7 @@
 - [ ] 浏览器标签页图标正常（`Ctrl + Shift + R` 强刷后再看）
 - [ ] `node script/sync-html.js --check` 输出 `✓ 页面和 sites.json / profile.json 一致`
 - [ ] `index.html` 的 `head` 里有 `.ico`、`.svg`、多个 `.png` 的 `<link rel="icon">`
-- [ ] 微信里分享/收藏，标题是「时光不语 · 个人主页」、封面是方形图
+- [ ] 微信里分享/收藏，标题是「时光不语 · 主页」、封面是方形图
 - [ ] Bing 的 `site:` 搜索里小图标换过来了（可能有延迟）
 
 ---
