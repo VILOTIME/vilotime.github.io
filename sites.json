@@ -4,7 +4,7 @@
   "sites": [
     {
       "id": "blog",
-      "title": "个人博客",
+      "title": "博客",
       "desc": "随笔与专栏",
       "href": "https://vilotime.github.io/blogs/",
       "icon": "blog",
@@ -15,7 +15,7 @@
     {
       "id": "games",
       "title": "叶初小游戏",
-      "desc": "浏览器在线小游戏",
+      "desc": "在线小游戏",
       "href": "https://vilotime.github.io/games/",
       "icon": "works",
       "color": "#a06bff",
