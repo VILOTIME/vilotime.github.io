@@ -25,7 +25,6 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var SCHEMA = 2;
   var DEFAULT_COLOR = '#7b93ff';
 
   /* 卡片图标库：json 里的 icon 只写 key，具体路径在这里维护。
@@ -95,7 +94,6 @@
     var list = Array.isArray(r.sites) ? r.sites : [];
     var sites = list.map(normalize);
     return {
-      schema: r.schema,
       title: String(r.title == null ? '' : r.title).trim() || '分站点',
       sites: sites,
       total: sites.length
@@ -135,7 +133,6 @@
   }
 
   return {
-    SCHEMA: SCHEMA,
     DEFAULT_COLOR: DEFAULT_COLOR,
     ICONS: ICONS,
     ICON_KEYS: Object.keys(ICONS),

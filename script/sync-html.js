@@ -61,9 +61,6 @@ const ds = S.parse(rawSites);
 const pp = P.parse(rawProfile);
 
 /* ---------------- 校验：分站点 ---------------- */
-if (rawSites.schema !== S.SCHEMA) {
-  warn('sites.json：schema 应为 ' + S.SCHEMA + '，当前是 ' + JSON.stringify(rawSites.schema));
-}
 if (!Array.isArray(rawSites.sites)) {
   fail('sites.json：顶层缺少 sites 数组');
 }
@@ -228,9 +225,6 @@ const metaView = {
 };
 
 /* ---------------- 校验：头像 / 网页图标 ---------------- */
-if (rawProfile.schema !== P.SCHEMA) {
-  warn('profile.json：schema 应为 ' + P.SCHEMA + '，当前是 ' + JSON.stringify(rawProfile.schema));
-}
 
 /* 通用：相对路径的图片来源检查（头像用） */
 function checkImagePath(src, at, required) {

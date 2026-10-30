@@ -9,9 +9,7 @@
 
 const S = require('./sites.js');
 
-const SCHEMA = 2;
-
-const ALLOWED_KEYS = ['schema', 'meta', 'avatar', 'icons', 'links'];
+const ALLOWED_KEYS = ['meta', 'avatar', 'icons', 'links'];
 const LINK_KEYS = ['github', 'email', 'rss'];
 const ICON_KEYS = ['ico', 'svg', 'png', 'appleTouch'];
 /* 这几个 key 还认，但已经合并进 icons，留着只是为了给出迁移提示 */
@@ -42,7 +40,6 @@ function parse(raw) {
   const png = pngList.map(iconEntry).filter(Boolean);
 
   return {
-    schema: r.schema,
     meta: {
       title: str(rawMeta.title),
       description: str(rawMeta.description),
@@ -227,7 +224,6 @@ function contactButtonHTML(p) {
 }
 
 module.exports = {
-  SCHEMA: SCHEMA,
   ALLOWED_KEYS: ALLOWED_KEYS,
   LINK_KEYS: LINK_KEYS,
   ICON_KEYS: ICON_KEYS,
