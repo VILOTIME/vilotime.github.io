@@ -1,4 +1,4 @@
-# 时光不语 · 个人主页
+# 时光不语 · 主页
 
 无构建步骤的纯静态个人主页：头像、昵称、简介，以及通往各分站点的跳转卡片。
 
@@ -13,38 +13,19 @@
 
 ```
 .
-├── index.html                # 页面骨架（带标记的区间都是脚本生成的，别手改）
-├── sites.json                # ★ 分站点清单
-├── profile.json              # ★ 站点信息 / 头像 / 图标 / 链接
-├── favicon.ico               # ★ 根目录图标（搜索引擎只认这个路径）
-├── script/                   # ★ 所有 JS（页面脚本 + 同步工具）
-│   ├── sites.js              # 卡片渲染器（浏览器和 Node 共用同一套模板）
-│   ├── main.js               # 主题切换、拉 json 渲染卡片、入场动效、占位提示
-│   ├── profile.js            # 头像 / 图标 / 分享卡片的 HTML 渲染器（构建期专用）
-│   ├── sync-html.js          # 把两个 json 同步进 index.html（--check 只检查）
-│   └── dev.js                # 本地预览服务器 + 保存 json 自动同步
-├── assets/
-│   ├── css/style.css         # 全部样式，顶部是配色变量
-│   └── img/
-│       ├── avatar-400.jpg    # 页面头像（400×400）
-│       ├── avatar.jpg        # 头像原图（816×816，页面不引用）
-│       ├── avatar.svg        # 头像占位图（备用）
-│       ├── favicon.svg       # 矢量图标（现代浏览器用）
-│       ├── icon-16/32/192/512.png   # 多尺寸 PNG 图标
-│       ├── apple-touch-icon.png     # iOS 主屏图标
-│       └── og-cover.png      # 分享 / 收藏封面（800×800）
-├── docs/
-│   └── cover-and-icons.md    # ★ 封面与图标的通用指南（附录才是本项目配置）
-├── tools/
-│   ├── sync.ps1              # 一键同步（校验 + 调 script/sync-html.js + 可选起预览）
-│   ├── sync.cmd              # 双击运行 sync.ps1 的入口
-│   └── make-icons.ps1        # 生成整套图标（favicon.ico / PNG / apple-touch-icon）
-├── .nojekyll                 # 让 GitHub Pages 跳过 Jekyll 处理
+├── index.html        # 页面骨架（带标记的区间是脚本生成的，别手改）
+├── sites.json        # ★ 分站点清单
+├── profile.json      # ★ 站点信息 / 头像 / 图标 / 链接
+├── favicon.ico       # 根目录图标（搜索引擎只认这个路径）
+├── script/           # 所有 JS（页面脚本 + 同步工具）
+├── assets/           # 样式与图片
+├── docs/             # 文档（封面与图标指南）
+├── tools/            # 一键同步、生成图标的脚本
+├── .nojekyll         # 让 GitHub Pages 跳过 Jekyll 处理
 └── README.md
 ```
 
-页面只加载 `script/sites.js` 和 `script/main.js`；`script/profile.js`、`script/sync-html.js`、`script/dev.js`
-是给 Node 用的，浏览器不会请求它们（放在同一个文件夹只是为了「所有 JS 一处」）。
+页面只加载 `script/` 里的 `sites.js` 和 `main.js`，其余 JS 是 Node 侧工具，浏览器不会请求。
 
 > 图标和封面有一套通用做法（三种「封面」的区别、为什么 Bing 会显示 GitHub 图标、
 > 怎么让它更新），写在 **[docs/cover-and-icons.md](docs/cover-and-icons.md)** 里——
