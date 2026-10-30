@@ -125,6 +125,16 @@
     var grid = document.getElementById('siteGrid');
     if (!api || !grid || typeof fetch !== 'function') { return; }
 
+    /* 双击 index.html（file://）时浏览器禁止 fetch 本地文件：
+       控制台会甩出「blocked by CORS policy」和「ERR_FAILED」两条报错，
+       而这时候本来也只能用页面里已经生成好的卡片。所以提前判断协议，不发这个注定失败的请求。 */
+    var scheme = location.protocol;
+    if (scheme !== 'http:' && scheme !== 'https:') {
+      console.info('[主页] 当前以 ' + scheme + ' 打开，跳过 sites.json 实时渲染，' +
+        '直接用页面内已生成的卡片。想看 json 实时生效，用 node script/dev.js 起本地预览。');
+      return;
+    }
+
     fetch('sites.json', { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }

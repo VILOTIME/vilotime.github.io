@@ -145,14 +145,77 @@ function absoluteUrl(base, rel) {
 }
 
 /* 直接读 PNG 的 IHDR 拿真实宽高，省得换图后写成旧数字 */
-function pngSize(absFile) {
+/* 读图片真实尺寸 + 真实格式。按文件头判断，不看扩展名——
+   因为「把 JPEG 存成 .png」这种事太常见了，扩展名不可信。 */
+function imageInfo(absFile) {
+  let buf;
   try {
-    const buf = fs.readFileSync(absFile);
-    const isPng = buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
-    if (!isPng) { return null; }
-    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+    buf = fs.readFileSync(absFile);
   } catch (e) {
     return null;
+  }
+
+  /* PNG：89 50 4E 47，宽高在 IHDR 里（偏移 16 / 20） */
+  if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return { format: 'png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  }
+
+  /* JPEG：FF D8 开头，扫到 SOFn 段取宽高 */
+  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i < buf.length - 9) {
+      if (buf[i] !== 0xff) { i++; continue; }
+      const marker = buf[i + 1];
+      /* 无长度字段的标记 */
+      if (marker === 0x01 || marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
+      if (marker === 0xd9 || marker === 0xda) { break; }
+      const len = buf.readUInt16BE(i + 2);
+      const isSof = marker >= 0xc0 && marker <= 0xcf &&
+        marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+      if (isSof) {
+        return { format: 'jpeg', height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
+      }
+      i += 2 + len;
+    }
+    return null;
+  }
+
+  /* GIF：GIF87a / GIF89a，宽高是小端 16 位 */
+  if (buf.length > 10 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
+    return { format: 'gif', width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) };
+  }
+
+  /* WebP：RIFF....WEBP */
+  if (buf.length > 30 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
+    const kind = buf.toString('ascii', 12, 16);
+    if (kind === 'VP8X') {
+      return {
+        format: 'webp',
+        width: 1 + buf.readUIntLE(24, 3),
+        height: 1 + buf.readUIntLE(27, 3)
+      };
+    }
+    if (kind === 'VP8 ') {
+      return { format: 'webp', width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+    }
+    if (kind === 'VP8L') {
+      const bits = buf.readUInt32LE(21);
+      return { format: 'webp', width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+    }
+  }
+
+  return null;
+}
+
+/* 扩展名和真实格式对不上时提醒一下：服务器是按扩展名发 Content-Type 的 */
+function checkFormatMatch(src, info, at) {
+  if (!info) { return; }
+  const ext = (/\.[a-z0-9]+$/i.exec(src) || [''])[0].toLowerCase();
+  const expected = { '.png': 'png', '.jpg': 'jpeg', '.jpeg': 'jpeg', '.gif': 'gif', '.webp': 'webp' }[ext];
+  if (expected && expected !== info.format) {
+    warn(at + '：文件名是 ' + ext + '，但图片实际是 ' + info.format.toUpperCase() +
+      '。服务器会按扩展名发 Content-Type，建议改成 .' + (info.format === 'jpeg' ? 'jpg' : info.format) + '（已按实际内容读取尺寸）');
   }
 }
 
@@ -183,18 +246,19 @@ if (!M.image) {
   if (!fs.existsSync(local)) {
     fail('profile.json → meta.image：文件 ' + M.image + ' 不存在');
   } else {
-    const size = /\.png$/i.test(M.image) ? pngSize(local) : null;
-    if (size) {
-      imageWidth = size.width;
-      imageHeight = size.height;
-      if (Number.isFinite(M.imageWidth) && M.imageWidth !== size.width) {
-        warn('profile.json → meta.imageWidth：写的是 ' + M.imageWidth + '，但图片实际是 ' + size.width + '（已按实际值输出）');
+    const info = imageInfo(local);
+    checkFormatMatch(M.image, info, 'profile.json → meta.image');
+    if (info) {
+      imageWidth = info.width;
+      imageHeight = info.height;
+      if (Number.isFinite(M.imageWidth) && M.imageWidth !== info.width) {
+        warn('profile.json → meta.imageWidth：写的是 ' + M.imageWidth + '，但图片实际是 ' + info.width + '（已按实际值输出）');
       }
-      if (Number.isFinite(M.imageHeight) && M.imageHeight !== size.height) {
-        warn('profile.json → meta.imageHeight：写的是 ' + M.imageHeight + '，但图片实际是 ' + size.height + '（已按实际值输出）');
+      if (Number.isFinite(M.imageHeight) && M.imageHeight !== info.height) {
+        warn('profile.json → meta.imageHeight：写的是 ' + M.imageHeight + '，但图片实际是 ' + info.height + '（已按实际值输出）');
       }
     } else if (!imageWidth || !imageHeight) {
-      warn('profile.json → meta.image：读不出图片尺寸（非 PNG 又没写 imageWidth/imageHeight），封面尺寸标签会省略');
+      warn('profile.json → meta.image：读不出图片尺寸（认不出格式，也没写 imageWidth/imageHeight），封面尺寸标签会省略');
     }
   }
   imageUrl = absoluteUrl(M.url, M.image);
@@ -301,9 +365,10 @@ I.png.forEach((item, i) => {
   if (!/\.png$/i.test(item.src)) {
     warn(at + '：这个位置应放 .png 文件（当前是 ' + item.src + '）');
   }
-  const size = pngSize(path.join(root, item.src));
-  if (size) {
-    const actual = size.width + 'x' + size.height;
+  const info = imageInfo(path.join(root, item.src));
+  checkFormatMatch(item.src, info, at);
+  if (info) {
+    const actual = info.width + 'x' + info.height;
     if (!item.sizes) {
       warn(at + '：没写 sizes，实际是 ' + actual + '（建议补上）');
       declaredPngSizes[item.src] = actual;

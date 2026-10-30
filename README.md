@@ -21,6 +21,7 @@
 ├── assets/           # 样式与图片
 ├── docs/             # 文档（封面与图标指南）
 ├── tools/            # 一键同步、生成图标的脚本
+├── .gitignore        # 忽略临时目录、系统垃圾、依赖
 ├── .nojekyll         # 让 GitHub Pages 跳过 Jekyll 处理
 └── README.md
 ```

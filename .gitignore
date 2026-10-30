@@ -1,0 +1,25 @@
+# 系统 / 编辑器产生的垃圾
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# 编辑器与 IDE 配置（想共享团队配置就删掉这两行）
+.vscode/
+.idea/
+
+# 依赖与构建产物（本项目目前没有，留着以防以后加）
+node_modules/
+dist/
+*.log
+
+# 临时目录：调试脚本、验证用的浏览器 profile、导出的中间文件
+# 这些通常几 MB，混进仓库会被一起部署到 GitHub Pages
+.tmp*/
+.tmp-*/
+*.tmp
+
+# 备份文件
+*.bak
+*.orig
