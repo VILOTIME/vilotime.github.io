@@ -22,8 +22,8 @@
     "appleTouch": { "src": "assets/img/apple-touch-icon.png", "sizes": "180x180" }
   },
   "links": {
-    "github": "https://github.com/VILOTIME",
+    "github": "https://github.com/vilotime",
     "email": "vilo.time@petalmail.com",
-    "rss": "https://github.com/VILOTIME/vilotime.github.io/commits/main.atom"
+    "rss": "https://github.com/vilotime/vilotime.github.io/commits/main.atom"
   }
 }
