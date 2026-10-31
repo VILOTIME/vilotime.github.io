@@ -234,8 +234,17 @@ if (!M.url) {
 
 /* 封面：本地路径检查存在性，绝对地址则跳过 */
 let imageUrl = '';
+let imageType = '';
 let imageWidth = Number.isFinite(M.imageWidth) ? M.imageWidth : null;
 let imageHeight = Number.isFinite(M.imageHeight) ? M.imageHeight : null;
+
+/* 图片格式 → MIME，用于 og:image:type */
+const IMAGE_MIME = {
+  png: 'image/png',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp'
+};
 
 if (!M.image) {
   warn('profile.json → meta.image：没写封面，微信收藏 / 分享不会显示缩略图');
@@ -251,6 +260,7 @@ if (!M.image) {
     if (info) {
       imageWidth = info.width;
       imageHeight = info.height;
+      imageType = IMAGE_MIME[info.format] || '';
       if (Number.isFinite(M.imageWidth) && M.imageWidth !== info.width) {
         warn('profile.json → meta.imageWidth：写的是 ' + M.imageWidth + '，但图片实际是 ' + info.width + '（已按实际值输出）');
       }
@@ -283,6 +293,7 @@ const metaView = {
   siteName: M.siteName,
   url: M.url,
   imageUrl: imageUrl,
+  imageType: imageType,
   imageAlt: M.imageAlt,
   imageWidth: imageWidth,
   imageHeight: imageHeight
@@ -332,20 +343,43 @@ if (AV.src && !/\.(svg|png|jpe?g|webp|gif)$/i.test(AV.src)) {
 const I = pp.icons;
 const declaredPngSizes = {};
 
+/* 读 ICO 的文件目录，拿到它内部真实包含的尺寸。
+   浏览器要靠 <link sizes> 判断该用哪张图：写 any 或写大了，高分屏上会放大位图 → 糊。 */
+function icoSizeList(absFile) {
+  let buf;
+  try { buf = fs.readFileSync(absFile); } catch (e) { return null; }
+  if (buf.length < 6 || buf[0] !== 0 || buf[1] !== 0 || buf[2] !== 1 || buf[3] !== 0) { return null; }
+
+  const count = buf.readUInt16LE(4);
+  if (!count || buf.length < 6 + count * 16) { return null; }
+
+  const sizes = [];
+  for (let i = 0; i < count; i++) {
+    const off = 6 + i * 16;
+    const w = buf[off] === 0 ? 256 : buf[off];
+    const h = buf[off + 1] === 0 ? 256 : buf[off + 1];
+    sizes.push(w + 'x' + h);
+  }
+  return { count: count, sizes: sizes };
+}
+
+let icoSizesText = '';
+
 /* ICO：搜索引擎和老浏览器只认这个，缺了就会退回托管域名的图标 */
 if (!I.ico) {
   warn('profile.json → icons.ico：没有配置 .ico 图标。Bing / 老浏览器只认 favicon.ico，' +
     '缺了会显示托管域名（github.io）的默认图标');
 } else if (checkImagePath(I.ico.src, 'profile.json → icons.ico', true)) {
   const icoAbs = path.join(root, I.ico.src);
-  try {
-    const head = fs.readFileSync(icoAbs).subarray(0, 4);
-    const isIco = head[0] === 0 && head[1] === 0 && head[2] === 1 && head[3] === 0;
-    if (!isIco) {
-      fail('profile.json → icons.ico：' + I.ico.src + ' 不是真正的 ICO 文件（可以跑 tools/make-icons.ps1 重新生成）');
+  const ico = icoSizeList(icoAbs);
+  if (!ico) {
+    fail('profile.json → icons.ico：' + I.ico.src + ' 不是真正的 ICO 文件（可以跑 tools/make-icons.ps1 重新生成）');
+  } else {
+    icoSizesText = ico.sizes.join(' ');
+    if (ico.sizes.indexOf('192x192') < 0) {
+      warn('profile.json → icons.ico：ICO 里没有 192×192（当前只有 ' + icoSizesText + '）。' +
+        '只认 /favicon.ico 的浏览器/系统会把 48 放大成桌面图标，看着会糊；重跑 tools/make-icons.ps1 可补上');
     }
-  } catch (e) {
-    fail('profile.json → icons.ico：读不了 ' + I.ico.src);
   }
 }
 
@@ -396,6 +430,42 @@ if (I.appleTouch) {
 pp.icons.png.forEach((item) => {
   if (declaredPngSizes[item.src]) { item.sizes = declaredPngSizes[item.src]; }
 });
+
+/* ---------------- web app manifest ---------------- */
+let manifestFile = null;
+let manifestBody = '';
+
+if (pp.icons.manifest) {
+  const manifest = pp.icons.manifest;
+  manifestFile = manifest.file;
+
+  const bigIcons = pp.icons.png.filter((x) => /^(192x192|512x512|384x384|144x144|180x180)$/.test(x.sizes));
+  if (!bigIcons.length) {
+    warn('profile.json → icons.manifest：icons.png 里没有 192 或 512 尺寸，Android「添加到主屏幕」会用小图放大');
+  }
+
+  manifestBody = P.manifestJSON({
+    name: manifest.name,
+    shortName: manifest.shortName,
+    themeColor: manifest.themeColor,
+    backgroundColor: manifest.backgroundColor,
+    icons: pp.icons.png
+  });
+
+  if (!manifest.name) {
+    warn('profile.json → icons.manifest：没有可用名字（meta.siteName / meta.title 都是空的）');
+  }
+}
+
+/* 图标渲染用的视图：.ico 的 sizes 要用文件里真实读出来的尺寸，不能写 any */
+const iconsView = {
+  ico: I.ico ? { src: I.ico.src, sizes: icoSizesText } : null,
+  svg: I.svg,
+  png: pp.icons.png,
+  appleTouch: I.appleTouch,
+  manifest: manifestFile,
+  avatarSrc: AV.src
+};
 
 /* 字段名检查 */
 Object.keys(rawProfile).forEach((k) => {
@@ -488,7 +558,7 @@ const REGIONS = [
   { mark: 'sites', label: '分站点卡片', indent: 6, body: () => S.gridHTML(ds) },
   { mark: 'profile:meta', label: '标题与分享卡片', indent: 0, body: () => P.metaHTML(metaView) },
   { mark: 'profile:avatar', label: '头像', indent: 6, body: () => P.avatarHTML(pp) },
-  { mark: 'profile:icons', label: '网页图标与头像预载', indent: 0, body: () => P.iconsHTML(pp) },
+  { mark: 'profile:icons', label: '网页图标与 manifest', indent: 0, body: () => P.iconsHTML(iconsView) },
   { mark: 'profile:links', label: '页脚链接', indent: 6, body: () => P.linksHTML(pp) },
   { mark: 'profile:contact', label: '联系我按钮', indent: 6, body: () => P.contactButtonHTML(pp) }
 ];
@@ -500,22 +570,53 @@ const results = REGIONS.map((r) => {
   return { label: r.label, changed: !!res.changed };
 });
 
+/* ---------------- 写 web app manifest（独立文件，不在 index.html 里） ---------------- */
+let manifestChanged = false;
+if (manifestFile && manifestBody) {
+  const abs = path.join(root, manifestFile);
+  let current = '';
+  try { current = fs.readFileSync(abs, 'utf8'); } catch (e) { current = ''; }
+
+  if (current !== manifestBody) {
+    manifestChanged = true;
+    if (!CHECK_ONLY) {
+      try {
+        fs.writeFileSync(abs, manifestBody, 'utf8');
+      } catch (e) {
+        fail(manifestFile + '：写入失败 —— ' + e.message);
+      }
+    }
+  }
+
+  /* manifest 里引用的图标必须真实存在，否则「添加到主屏幕」会拿不到图 */
+  pp.icons.png.forEach((item) => {
+    if (!fs.existsSync(path.join(root, item.src))) {
+      fail(manifestFile + '：引用的 ' + item.src + ' 不存在');
+    }
+  });
+}
+
 /* ---------------- 输出 ---------------- */
 console.log('profile.json');
 console.log('  · 标题：' + M.title);
 if (metaView.imageUrl) {
   const dim = (metaView.imageWidth && metaView.imageHeight)
     ? '（' + metaView.imageWidth + '×' + metaView.imageHeight + '）' : '';
-  console.log('  · 封面：' + metaView.imageUrl + dim);
+  console.log('  · 封面：' + metaView.imageUrl + dim + (imageType ? ' ' + imageType : ''));
 }
 console.log('  · 头像：' + AV.src);
-if (I.ico) { console.log('  · 图标 .ico：' + I.ico.src + '（搜索引擎 / 老浏览器用）'); }
-if (I.svg) { console.log('  · 图标 .svg：' + I.svg.src); }
+if (I.ico) {
+  console.log('  · 图标 .ico：' + I.ico.src + '（内含 ' + (icoSizesText || '读不出尺寸') + '，搜索引擎 / 老浏览器用）');
+}
+if (I.svg) { console.log('  · 图标 .svg：' + I.svg.src + '（sizes="any"）'); }
 if (pp.icons.png.length) {
   console.log('  · 图标 .png：' + pp.icons.png.map((x) => x.sizes || '?').join(' / '));
 }
 if (I.appleTouch) {
   console.log('  · 主屏图标：' + I.appleTouch.src + '（' + (I.appleTouch.sizes || '180x180') + '）');
+}
+if (manifestFile) {
+  console.log('  · manifest：' + manifestFile + '（' + pp.icons.png.length + ' 个图标）');
 }
 if (pp.links.github) { console.log('  · GitHub：' + pp.links.github); }
 if (pp.links.email) { console.log('  · Email：' + pp.links.email); }
@@ -528,6 +629,7 @@ ds.sites.forEach((s) => {
 });
 
 const touched = results.filter((r) => r.changed).map((r) => TARGET + '（' + r.label + '）');
+if (manifestChanged) { touched.push(manifestFile); }
 
 if (CHECK_ONLY) {
   if (touched.length) {

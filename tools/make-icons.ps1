@@ -140,8 +140,10 @@ foreach ($t in $pngTargets) {
     $bmp.Dispose()
 }
 
-# ---------- 2. favicon.ico（16/32/48，PNG 内嵌，Vista 以后都支持） ----------
-$icoSizes = @(16, 32, 48)
+# ---------- 2. favicon.ico（16/32/48 + 192，PNG 内嵌，Vista 以后都支持） ----------
+# 为什么要把 192 也塞进去：有些浏览器/系统只认 /favicon.ico，既不读 <link> 也不读 manifest，
+# 里面没有大图时它们会把 48 放大到桌面/主屏尺寸，结果就是图标发糊。
+$icoSizes = @(16, 32, 48, 192)
 $entries = @()
 foreach ($s in $icoSizes) {
     $bmp = New-IconBitmap $s $false

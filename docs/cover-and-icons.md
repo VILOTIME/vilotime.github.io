@@ -18,21 +18,25 @@
 ### 最少要给两样东西
 
 ```html
-<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">
 ```
 
 - **`/favicon.ico` 放在站点根目录**：这是浏览器和搜索引擎默认会尝试的路径，放这里就不依赖
-  `<link>` 是否被正确解析。`sizes="any"` 表示 ICO 文件内部自带了多个尺寸。
+  `<link>` 是否被正确解析。
+- **`sizes` 要写 ICO 里真实包含的尺寸**（用空格分隔）。`sizes="any"` 只该给 SVG 用：
+  它等于告诉浏览器「这张图任意尺寸都清晰」，浏览器就会把 ICO 当作可缩放图去挑，
+  在高分屏（平板、DPR ≥ 2 的手机）上把这个位图放大后显示，结果就是**图标糊**。
+  写的尺寸必须和 ICO 目录里实际存的条目一致，写大了同样会被放大。
 - **PNG 多尺寸**：搜索引擎抓缩略图时会按 `sizes` 挑合适的，给 16 / 32 / 192 / 512 比较稳妥。
 
 ### 完整推荐写法
 
 ```html
-<!-- 兜底：搜索引擎、老浏览器 -->
-<link rel="icon" href="/favicon.ico" sizes="any">
-<!-- 现代浏览器首选，矢量最清晰；但搜索引擎不认 -->
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- 兜底：搜索引擎、老浏览器。sizes 写 ICO 内部的真实尺寸，别写 any -->
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<!-- 现代浏览器首选，矢量最清晰；但搜索引擎不认。这里才用 sizes="any" -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
 <!-- 多尺寸 PNG -->
 <link rel="icon" href="/icon-16.png" type="image/png" sizes="16x16">
 <link rel="icon" href="/icon-32.png" type="image/png" sizes="32x32">
@@ -69,6 +73,9 @@
 | 48×48 | Windows 桌面快捷方式、部分搜索引擎 |
 | 180×180 | iOS「添加到主屏幕」 |
 | 192×192 / 512×512 | Android 主屏、PWA、富摘要 |
+
+> 大尺寸（192）**也塞进 ICO** 是值得的：有些浏览器和系统只认 `/favicon.ico`，
+> 既不读 `<link>` 也不读 manifest，里面没有大图它们就把 48 放大成桌面/主屏图标 —— 就是「糊」。
 
 设计要点：**16px 也要能认出来**。细节多、颜色杂的图在标签页里就是一团糊，
 简洁的符号或字母比照片效果好得多。
@@ -192,6 +199,9 @@ GitHub / Netlify 的小图标。
 - [ ] `<link rel="icon">` 指向的 ICO 能直接打开，返回的是图标（不是 404、不是 HTML）
 - [ ] 站点在子路径时，图标路径带上了子路径（或用了相对路径），没有写死域名根的 `/favicon.ico`
 - [ ] `<head>` 里有 `.ico` + 至少一个 PNG 的 `<link rel="icon">`
+- [ ] ICO 的 `sizes` 写的是文件内部真实尺寸（不是 `any`），PNG 的 `sizes` 与图片宽高一致
+- [ ] 高 DPR 设备（平板 / 手机）上标签页图标不糊 —— 糊就说明位图被放大了，回去查 `sizes`
+- [ ] 有 `site.webmanifest`，里面 192 / 512 图标路径能打开
 - [ ] 每个图标 URL 都能 200（F12 → Network 里筛 `icon` 看状态码）
 - [ ] `og:image` 是绝对地址，`https://` 开头且公网能直接打开
 - [ ] `og:image` 的实际宽高与 `og:image:width/height` 一致
@@ -218,11 +228,13 @@ GitHub / Netlify 的小图标。
 不会。图标（favicon）和封面（og:image）是两套完全独立的东西。
 
 **Q：需要 web app manifest 吗？**
-只有做 PWA 或想控制 Android「添加到主屏幕」时才需要，和搜索引擎缩略图无关。
+不做 PWA 也建议放一个（几行 JSON）：Android / 平板浏览器在「添加到主屏幕」和桌面快捷方式里
+优先用 manifest 的 192 / 512 图标，比 ICO 清晰得多。和搜索引擎缩略图无关。
+注意 manifest 里的 `icons.src` 是**相对 manifest 文件自身**解析的，`start_url: "./"` 也是同样相对它。
 
 **Q：ICO 里的图像用什么格式？**
 现代浏览器和搜索引擎都支持「ICO 容器 + 内部各尺寸 PNG」，用脚本从已有的 PNG 拼一个多尺寸
-ICO 即可（16/32/48 就够），不用自己写 BMP 编码。
+ICO 即可（16/32/48 再加一个 192 就够），不用自己写 BMP 编码。
 
 ---
 
@@ -234,7 +246,7 @@ ICO 即可（16/32/48 就够），不用自己写 BMP 编码。
 
    | 文件 | 尺寸 | 说明 |
    | --- | --- | --- |
-   | `favicon.ico` | 内含 16/32/48 | 放**站点根目录** |
+   | `favicon.ico` | 内含 16/32/48 + 一个 192 | 放**站点根目录** |
    | `icon-16.png` / `icon-32.png` | 16 / 32 | 标签页 |
    | `icon-192.png` / `icon-512.png` | 192 / 512 | Android / PWA / 富摘要 |
    | `apple-touch-icon.png` | 180 | iOS 主屏，**不透明满版** |

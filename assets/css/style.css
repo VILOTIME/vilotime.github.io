@@ -228,6 +228,30 @@ a { color: inherit; text-decoration: none; }
   isolation: isolate;
 }
 
+/* 占位圆：图片没下载完时先显示它，避免看到「从上往下刷」的半张脸。
+   一直存在也没关系——图片加载完会盖在它上面。 */
+.avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg,
+    var(--bg-soft),
+    color-mix(in oklab, var(--accent) 18%, var(--bg-soft)));
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* 加载中：占位圆轻轻呼吸，表示还在等 */
+.avatar--pending::after {
+  animation: avatar-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes avatar-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 .avatar__ring {
   position: absolute;
   inset: -8px;
@@ -241,18 +265,25 @@ a { color: inherit; text-decoration: none; }
 
 .avatar__img {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
   box-shadow: var(--shadow-lift), 0 0 0 5px var(--bg);
-  transition: transform 0.5s var(--ease);
+  transition: transform 0.5s var(--ease), opacity 0.45s var(--ease);
+}
+
+/* 还在下载：整张图先藏着；load 之后由 JS 去掉这个类，淡入 */
+.avatar--pending .avatar__img {
+  opacity: 0;
 }
 
 .avatar:hover .avatar__img { transform: scale(1.04); }
 
 .avatar__badge {
   position: absolute;
+  z-index: 2;
   right: 2px;
   bottom: 6px;
   padding: 3px 9px;

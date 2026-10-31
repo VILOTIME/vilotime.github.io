@@ -14,6 +14,7 @@
 <meta property="og:description" content="时光不语的个人主页" />
 <meta property="og:url" content="https://vilotime.github.io/" />
 <meta property="og:image" content="https://vilotime.github.io/assets/img/og-cover.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="640" />
 <meta property="og:image:height" content="640" />
 <meta property="og:image:alt" content="时光不语 · 主页" />
@@ -27,20 +28,21 @@
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
 <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
 
-<!-- 网页图标 + 头像预载：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
+<!-- 网页图标 + manifest + 头像预载：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
 <!-- profile:icons:start -->
-<link rel="icon" href="favicon.ico" sizes="any" />
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48 192x192" />
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" sizes="any" />
 <link rel="icon" href="assets/img/icon-16.png" type="image/png" sizes="16x16" />
 <link rel="icon" href="assets/img/icon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="assets/img/icon-192.png" type="image/png" sizes="192x192" />
 <link rel="icon" href="assets/img/icon-512.png" type="image/png" sizes="512x512" />
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" sizes="180x180" />
+<link rel="manifest" href="site.webmanifest" />
 <link rel="preload" as="image" href="assets/img/avatar-400.jpg" fetchpriority="high" />
 <!-- profile:icons:end -->
 <link rel="stylesheet" href="assets/css/style.css" />
 <!-- 没有 JS 时也要能看到内容（入场动效依赖 JS 添加 is-visible） -->
-<noscript><style>.reveal{opacity:1 !important;transform:none !important}.theme-toggle{display:none}</style></noscript>
+<noscript><style>.reveal{opacity:1 !important;transform:none !important}.theme-toggle{display:none}.avatar--pending .avatar__img{opacity:1 !important}</style></noscript>
 </head>
 <body>
 
@@ -66,7 +68,9 @@
 
   <!-- ===== 个人资料 ===== -->
   <header class="profile reveal">
-    <div class="avatar">
+    <!-- avatar--pending：图片还没下载完，先显示占位圆；JS 在 load 之后去掉它。
+         没有 JS 时由下面的 <noscript> 直接把图片显示出来。 -->
+    <div class="avatar avatar--pending">
       <div class="avatar__ring"></div>
       <!-- 头像：由 script/sync-html.js 从 profile.json 生成，别手改这个区间 -->
       <!-- profile:avatar:start -->

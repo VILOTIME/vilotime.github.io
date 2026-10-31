@@ -47,6 +47,25 @@
     });
   }
 
+  /* ---------- 头像：等下载完再显示 ----------
+   * 网速慢的时候，浏览器会把 JPEG 边收边画，看起来像「一点点加载」。
+   * 所以 HTML 里给 .avatar 预置了 avatar--pending（图片 opacity: 0，只露占位圆），
+   * 这里等图片真正下载完再去掉这个类，让它整体淡入；已缓存的直接显示。 */
+  (function revealAvatar() {
+    var img = document.querySelector('.avatar__img');
+    var box = img && img.closest ? img.closest('.avatar') : null;
+    if (!img || !box) { return; }
+
+    function show() { box.classList.remove('avatar--pending'); }
+
+    // 已经下载完（缓存命中）：直接显示，不用等
+    if (img.complete && img.naturalWidth > 0) { show(); return; }
+
+    img.addEventListener('load', show);
+    // 加载失败也别一直空着，露出 alt 让用户知道发生了什么
+    img.addEventListener('error', show);
+  })();
+
   /* ---------- 滚动入场 ---------- */
   var observeReveals = (function () {
     var reduceMotion = window.matchMedia &&
