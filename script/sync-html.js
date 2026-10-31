@@ -419,58 +419,23 @@ I.png.forEach((item, i) => {
   }
 });
 
-if (I.appleTouch) {
-  checkImagePath(I.appleTouch.src, 'profile.json → icons.appleTouch', false);
-  if (!I.appleTouch.sizes) {
-    warn('profile.json → icons.appleTouch：没写 sizes，默认按 180x180 输出');
-  }
-}
-
 /* sizes 一律用图片实测值，避免 JSON 里写了旧数字 */
 pp.icons.png.forEach((item) => {
   if (declaredPngSizes[item.src]) { item.sizes = declaredPngSizes[item.src]; }
 });
-
-/* ---------------- web app manifest ---------------- */
-let manifestFile = null;
-let manifestBody = '';
-
-if (pp.icons.manifest) {
-  const manifest = pp.icons.manifest;
-  manifestFile = manifest.file;
-
-  const bigIcons = pp.icons.png.filter((x) => /^(192x192|512x512|384x384|144x144|180x180)$/.test(x.sizes));
-  if (!bigIcons.length) {
-    warn('profile.json → icons.manifest：icons.png 里没有 192 或 512 尺寸，Android「添加到主屏幕」会用小图放大');
-  }
-
-  manifestBody = P.manifestJSON({
-    name: manifest.name,
-    shortName: manifest.shortName,
-    themeColor: manifest.themeColor,
-    backgroundColor: manifest.backgroundColor,
-    icons: pp.icons.png
-  });
-
-  if (!manifest.name) {
-    warn('profile.json → icons.manifest：没有可用名字（meta.siteName / meta.title 都是空的）');
-  }
-}
 
 /* 图标渲染用的视图：.ico 的 sizes 要用文件里真实读出来的尺寸，不能写 any */
 const iconsView = {
   ico: I.ico ? { src: I.ico.src, sizes: icoSizesText } : null,
   svg: I.svg,
   png: pp.icons.png,
-  appleTouch: I.appleTouch,
-  manifest: manifestFile,
   avatarSrc: AV.src
 };
 
 /* 字段名检查 */
 Object.keys(rawProfile).forEach((k) => {
   if (P.LEGACY_ICON_KEYS.indexOf(k) >= 0) {
-    fail('profile.json：顶层字段 "' + k + '" 已经合并进 icons（现在写 icons.ico / icons.svg / icons.png / icons.appleTouch）');
+    fail('profile.json：顶层字段 "' + k + '" 已经合并进 icons（现在写 icons.ico / icons.svg / icons.png）');
     return;
   }
   if (P.ALLOWED_KEYS.indexOf(k) < 0) {
@@ -558,7 +523,7 @@ const REGIONS = [
   { mark: 'sites', label: '分站点卡片', indent: 6, body: () => S.gridHTML(ds) },
   { mark: 'profile:meta', label: '标题与分享卡片', indent: 0, body: () => P.metaHTML(metaView) },
   { mark: 'profile:avatar', label: '头像', indent: 6, body: () => P.avatarHTML(pp) },
-  { mark: 'profile:icons', label: '网页图标与 manifest', indent: 0, body: () => P.iconsHTML(iconsView) },
+  { mark: 'profile:icons', label: '网页图标与头像预载', indent: 0, body: () => P.iconsHTML(iconsView) },
   { mark: 'profile:links', label: '页脚链接', indent: 6, body: () => P.linksHTML(pp) },
   { mark: 'profile:contact', label: '联系我按钮', indent: 6, body: () => P.contactButtonHTML(pp) }
 ];
@@ -569,32 +534,6 @@ const results = REGIONS.map((r) => {
   if (!res.ok) { fail(TARGET + '：' + r.label + ' —— ' + res.why); }
   return { label: r.label, changed: !!res.changed };
 });
-
-/* ---------------- 写 web app manifest（独立文件，不在 index.html 里） ---------------- */
-let manifestChanged = false;
-if (manifestFile && manifestBody) {
-  const abs = path.join(root, manifestFile);
-  let current = '';
-  try { current = fs.readFileSync(abs, 'utf8'); } catch (e) { current = ''; }
-
-  if (current !== manifestBody) {
-    manifestChanged = true;
-    if (!CHECK_ONLY) {
-      try {
-        fs.writeFileSync(abs, manifestBody, 'utf8');
-      } catch (e) {
-        fail(manifestFile + '：写入失败 —— ' + e.message);
-      }
-    }
-  }
-
-  /* manifest 里引用的图标必须真实存在，否则「添加到主屏幕」会拿不到图 */
-  pp.icons.png.forEach((item) => {
-    if (!fs.existsSync(path.join(root, item.src))) {
-      fail(manifestFile + '：引用的 ' + item.src + ' 不存在');
-    }
-  });
-}
 
 /* ---------------- 输出 ---------------- */
 console.log('profile.json');
@@ -612,12 +551,6 @@ if (I.svg) { console.log('  · 图标 .svg：' + I.svg.src + '（sizes="any"）'
 if (pp.icons.png.length) {
   console.log('  · 图标 .png：' + pp.icons.png.map((x) => x.sizes || '?').join(' / '));
 }
-if (I.appleTouch) {
-  console.log('  · 主屏图标：' + I.appleTouch.src + '（' + (I.appleTouch.sizes || '180x180') + '）');
-}
-if (manifestFile) {
-  console.log('  · manifest：' + manifestFile + '（' + pp.icons.png.length + ' 个图标）');
-}
 if (pp.links.github) { console.log('  · GitHub：' + pp.links.github); }
 if (pp.links.email) { console.log('  · Email：' + pp.links.email); }
 if (pp.links.rss) { console.log('  · RSS：' + pp.links.rss); }
@@ -629,7 +562,6 @@ ds.sites.forEach((s) => {
 });
 
 const touched = results.filter((r) => r.changed).map((r) => TARGET + '（' + r.label + '）');
-if (manifestChanged) { touched.push(manifestFile); }
 
 if (CHECK_ONLY) {
   if (touched.length) {

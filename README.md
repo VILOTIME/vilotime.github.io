@@ -17,7 +17,6 @@
 ├── sites.json        # ★ 分站点清单
 ├── profile.json      # ★ 站点信息 / 头像 / 图标 / 链接
 ├── favicon.ico       # 根目录图标（内含 16/32/48/192，搜索引擎只认这个路径）
-├── site.webmanifest  # Android / PWA 图标清单（脚本生成）
 ├── script/           # 所有 JS（页面脚本 + 同步工具）
 ├── assets/           # 样式与图片
 ├── docs/             # 文档（封面与图标指南）
@@ -56,8 +55,7 @@
       { "src": "assets/img/icon-32.png",  "sizes": "32x32" },
       { "src": "assets/img/icon-192.png", "sizes": "192x192" },
       { "src": "assets/img/icon-512.png", "sizes": "512x512" }
-    ],
-    "appleTouch": { "src": "assets/img/apple-touch-icon.png", "sizes": "180x180" }
+    ]
   },
   "links": {
     "github": "https://github.com/VILOTIME",
@@ -82,8 +80,6 @@
 | `icons.ico` | **强烈建议** | `.ico` 放在仓库根目录（`favicon.ico`）。**搜索引擎只认这个**，缺了会显示 github.io 的默认图标。里面要含 16/32/48 **+ 192** |
 | `icons.svg` | 可选 | 现代浏览器首选，矢量最清晰；但搜索引擎不认 SVG。只有它该写 `sizes="any"` |
 | `icons.png` | **强烈建议** | 多尺寸 PNG 数组，每项 `{ "src": …, "sizes": "32x32" }` |
-| `icons.appleTouch` | 可选 | iOS 主屏图标，一般 180×180 |
-| `icons.manifest` | 可选 | `web app manifest`：不写就按默认生成 `site.webmanifest`，写 `false` 则关闭 |
 | `links.github` | 可选 | 页脚 GitHub 入口，留空则不显示 |
 | `links.email` | 可选 | 页脚 Email + 头部「联系我」按钮，写 `a@b.com` 即可（也接受 `mailto:` 前缀） |
 | `links.rss` | 可选 | 页脚 RSS 入口，留空则不显示 |
@@ -98,7 +94,7 @@
 .\tools\make-icons.ps1 -Design avatar  # 用头像照片做图标
 ```
 
-一次生成 `favicon.ico`（内含 **16/32/48 + 192**）+ `icon-16/32/192/512.png` + `apple-touch-icon.png`，并回读校验。
+一次生成 `favicon.ico`（内含 **16/32/48 + 192**）+ `icon-16/32/192/512.png`，并回读校验。
 细节和排查方法见 [docs/cover-and-icons.md](docs/cover-and-icons.md)。
 
 ### ICO 的 sizes 为什么不能写 any
@@ -201,12 +197,10 @@ https://github.com/<用户名>/<仓库名>/commits/<分支>.atom
 | `sites.json` | `<!-- sites:start --> … <!-- sites:end -->` | 卡片 = 内容，http 下要能改完刷新即生效，所以运行时也渲染 |
 | `profile.json` | `<!-- profile:meta:start --> … :end -->` | 标题 / 描述 / og 卡片：要一次生成，避免多处不同步 |
 | `profile.json` | `<!-- profile:avatar:start --> … :end -->` | 头像 = 页面铬件，运行时重渲染没意义 |
-| `profile.json` | `<!-- profile:icons:start --> … :end -->` | 图标 / manifest / 头像预载，换不优雅，只在构建期写 |
+| `profile.json` | `<!-- profile:icons:start --> … :end -->` | 图标与头像预载，换不优雅，只在构建期写 |
 | `profile.json` | `<!-- profile:links:start --> … :end -->` | 页脚 GitHub / Email / RSS |
 | `profile.json` | `<!-- profile:contact:start --> … :end -->` | 头部「联系我」按钮（复用 `links.email`） |
 
-除了改 `index.html` 的区间，同步还会**单独写出 `site.webmanifest`**
-（内容由 `profile.json` 的 `icons` / `meta` 推出来，也可以整个关掉）。
 
 ```powershell
 .\tools\sync.cmd                     # 或双击；等价的直接调用是 node script/sync-html.js

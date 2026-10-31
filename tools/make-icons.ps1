@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    生成站点的整套图标文件（favicon.ico / PNG 各尺寸 / apple-touch-icon）
+    生成站点的图标文件（favicon.ico / PNG 各尺寸）
 
 .DESCRIPTION
     搜索引擎（尤其是 Bing）不认 SVG favicon，也不一定会去读 <link rel="icon">，
@@ -8,12 +8,14 @@
     —— 在 GitHub Pages 上就是你看到的 GitHub 小图标。
 
     这个脚本一次生成所有需要的文件：
-      favicon.ico                     根目录（16/32/48 三种尺寸打包在一个 ICO 里）
+      favicon.ico                     根目录（16/32/48/192 打包在一个 ICO 里）
       assets/img/icon-16.png
       assets/img/icon-32.png
       assets/img/icon-192.png
       assets/img/icon-512.png
-      assets/img/apple-touch-icon.png 180×180
+
+    注意：不生成 apple-touch-icon，也不生成 web app manifest ——
+    这个站是博客首页，不做「安装成应用」。
 
 .PARAMETER Design
     monogram = 渐变底 + 白色 V（默认，和 favicon.svg 一致）
@@ -126,12 +128,13 @@ function Get-PngBytes($bmp) {
 Write-Host ("生成图标（设计：{0}）" -f $Design) -ForegroundColor Cyan
 
 # ---------- 1. 各个 PNG ----------
+# 只生成站点图标。不再有 apple-touch-icon：这个站不做「安装成应用」，
+# iOS 主屏图标属于安装场景，需要时再加回来（尺寸 180×180）。
 $pngTargets = @(
     @{ Size = 16; File = 'icon-16.png'; Round = $false },
     @{ Size = 32; File = 'icon-32.png'; Round = $false },
     @{ Size = 192; File = 'icon-192.png'; Round = $false },
-    @{ Size = 512; File = 'icon-512.png'; Round = $false },
-    @{ Size = 180; File = 'apple-touch-icon.png'; Round = ($Design -eq 'avatar') }
+    @{ Size = 512; File = 'icon-512.png'; Round = $false }
 )
 
 foreach ($t in $pngTargets) {

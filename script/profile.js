@@ -11,17 +11,10 @@ const S = require('./sites.js');
 
 const ALLOWED_KEYS = ['meta', 'avatar', 'icons', 'links'];
 const LINK_KEYS = ['github', 'email', 'rss'];
-const ICON_KEYS = ['ico', 'svg', 'png', 'appleTouch', 'manifest'];
+const ICON_KEYS = ['ico', 'svg', 'png'];
 /* 这几个 key 还认，但已经合并进 icons，留着只是为了给出迁移提示 */
 const LEGACY_ICON_KEYS = ['favicon', 'appleTouchIcon'];
 const META_KEYS = ['title', 'description', 'siteName', 'url', 'image', 'imageAlt', 'imageWidth', 'imageHeight'];
-
-/* manifest 的默认值：名字沿用站点标题，颜色沿用页面深色底 */
-const MANIFEST_DEFAULTS = {
-  file: 'site.webmanifest',
-  themeColor: '#0b0d12',
-  backgroundColor: '#0a0c11'
-};
 
 function str(value) {
   return String(value == null ? '' : value).trim();
@@ -63,23 +56,12 @@ function parse(raw) {
       width: str(rawAvatar.width),
       height: str(rawAvatar.height)
     },
-    /* 站点图标：ico（老浏览器 / 搜索引擎）+ svg（现代浏览器）+ png 多尺寸 + iOS 主屏 + manifest */
+    /* 站点图标：ico（老浏览器 / 搜索引擎）+ svg（现代浏览器）+ png 多尺寸。
+       没有 apple-touch-icon / manifest —— 这个站不做「安装成应用」。 */
     icons: {
       ico: iconEntry(rawIcons.ico),
       svg: iconEntry(rawIcons.svg),
-      png: png,
-      appleTouch: iconEntry(rawIcons.appleTouch),
-      /* 不写 / 写对象 → 生成；显式写 false → 不生成 */
-      manifest: rawIcons.manifest === false ? null : (function () {
-        const m = rawIcons.manifest && typeof rawIcons.manifest === 'object' ? rawIcons.manifest : {};
-        return {
-          file: str(m.file) || MANIFEST_DEFAULTS.file,
-          name: str(m.name) || str(rawMeta.siteName) || str(rawMeta.title),
-          shortName: str(m.shortName) || str(rawMeta.siteName) || str(rawMeta.title),
-          themeColor: str(m.themeColor) || MANIFEST_DEFAULTS.themeColor,
-          backgroundColor: str(m.backgroundColor) || MANIFEST_DEFAULTS.backgroundColor
-        };
-      })()
+      png: png
     },
     links: {
       github: str(rawLinks.github),
@@ -157,7 +139,7 @@ function avatarHTML(p) {
   return '<img ' + attrs.join(' ') + ' />';
 }
 
-/* 站点图标 + manifest + 头像预载（都在 <head> 里）
+/* 站点图标 + 头像预载（都在 <head> 里）
  * 顺序有讲究：.ico 放最前兜底（老浏览器和搜索引擎只认它），
  * 然后 svg（现代浏览器最清晰），最后逐尺寸 png（Google/Bing 抓缩略图会看 sizes）。
  *
@@ -185,47 +167,12 @@ function iconsHTML(v) {
     lines.push('<link ' + attrs.join(' ') + ' />');
   });
 
-  if (v.appleTouch && v.appleTouch.src) {
-    const attrs = ['rel="apple-touch-icon"', 'href="' + S.esc(v.appleTouch.src) + '"'];
-    attrs.push('sizes="' + S.esc(v.appleTouch.sizes || '180x180') + '"');
-    lines.push('<link ' + attrs.join(' ') + ' />');
-  }
-
-  /* Android / 平板「添加到主屏幕」优先读 manifest 的 192 / 512，比 ICO 清晰 */
-  if (v.manifest) {
-    lines.push('<link rel="manifest" href="' + S.esc(v.manifest) + '" />');
-  }
-
   /* 头像提前拉：进页面时就不会看到它从上面一行行「刷」出来 */
   if (v.avatarSrc) {
     lines.push('<link rel="preload" as="image" href="' + S.esc(v.avatarSrc) + '" fetchpriority="high" />');
   }
 
   return lines.join('\n');
-}
-
-/* 生成 web app manifest 的内容。
- * 注意：manifest 里的 src 是相对【manifest 文件自身】解析的，所以 manifest 放站点根目录时，
- * 图片路径可以直接沿用站点相对路径；start_url / scope 用 "./" 同理。 */
-function manifestJSON(opts) {
-  const icons = (opts.icons || []).map((item) => ({
-    src: item.src,
-    sizes: item.sizes,
-    type: 'image/png'
-  })).filter((item) => item.src && item.sizes);
-
-  const manifest = {
-    name: opts.name,
-    short_name: opts.shortName || opts.name,
-    start_url: './',
-    scope: './',
-    display: 'standalone',
-    background_color: opts.backgroundColor,
-    theme_color: opts.themeColor,
-    icons: icons
-  };
-
-  return JSON.stringify(manifest, null, 2) + '\n';
 }
 
 /* 页脚链接：github / email / rss，填了哪个就出哪个，分隔点自动加 */
@@ -285,12 +232,10 @@ module.exports = {
   ICON_KEYS: ICON_KEYS,
   LEGACY_ICON_KEYS: LEGACY_ICON_KEYS,
   META_KEYS: META_KEYS,
-  MANIFEST_DEFAULTS: MANIFEST_DEFAULTS,
   parse: parse,
   metaHTML: metaHTML,
   avatarHTML: avatarHTML,
   iconsHTML: iconsHTML,
-  manifestJSON: manifestJSON,
   linksHTML: linksHTML,
   contactButtonHTML: contactButtonHTML
 };
